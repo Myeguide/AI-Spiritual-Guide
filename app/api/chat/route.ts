@@ -1,70 +1,46 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { classifyQuestion } from '@/lib/classification/question-classify';
 import { createOpenAI } from '@ai-sdk/openai';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamText, smoothStream } from 'ai';
-import { headers } from 'next/headers';
-import { getModelConfig, AIModel } from '@/lib/models';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
+const MODEL_NAME = "gpt-4o";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model } = await req.json();
-    const headersList = await headers();
+    const { messages } = await req.json();
+    const openai = createOpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+    });
 
-    const modelConfig = getModelConfig(model as AIModel);
+    // Classify the question and get routed response
+    const routedQuestion = await classifyQuestion(
+      messages[messages.length - 1].content
+    );
 
-    const apiKey = headersList.get(modelConfig.headerKey) as string;
+    const contextDocuments = routedQuestion.relevantDocuments
+      .map(
+        (doc) =>
+          `Title: ${doc.title}\nDescription: ${doc.description}\n\nContent: ${doc.content}`
+      )
+      .join("\n\n---\n\n");
+    const confidence = routedQuestion.confidence;
+    const systemPrompt = `
+          You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
+          Confidence Level: ${(confidence * 100).toFixed(1)}%
+          When answering questions, use the following spiritual context documents to provide accurate, compassionate, and relevant information:
 
-    let aiModel;
-    switch (modelConfig.provider) {
-      case 'google':
-        const google = createGoogleGenerativeAI({ apiKey });
-        aiModel = google(modelConfig.modelId);
-        break;
-
-      case 'openai':
-        const openai = createOpenAI({ apiKey });
-        aiModel = openai(modelConfig.modelId);
-        break;
-
-      case 'openrouter':
-        const openrouter = createOpenRouter({ apiKey });
-        aiModel = openrouter(modelConfig.modelId);
-        break;
-
-      default:
-        return new Response(
-          JSON.stringify({ error: 'Unsupported model provider' }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-    }
+          === SPIRITUAL CONTEXT DOCUMENTS ===
+          ${contextDocuments}
+        `;
 
     const result = streamText({
-      model: aiModel,
+      model: openai(MODEL_NAME),
       messages,
       onError: (error) => {
         console.log('error', error);
       },
-      system: `
-      You are Chat0, an ai assistant that can answer questions and help with tasks.
-      Be helpful and provide relevant information
-      Be respectful and polite in all interactions.
-      Be engaging and maintain a conversational tone.
-      Always use LaTeX for mathematical expressions - 
-      Inline math must be wrapped in single dollar signs: $content$
-      Display math must be wrapped in double dollar signs: $$content$$
-      Display math should be placed on its own line, with nothing else on that line.
-      Do not nest math delimiters or mix styles.
-      Examples:
-      - Inline: The equation $E = mc^2$ shows mass-energy equivalence.
-      - Display: 
-      $$\\frac{d}{dx}\\sin(x) = \\cos(x)$$
-      `,
+      system: systemPrompt,
       experimental_transform: [smoothStream({ chunking: 'word' })],
       abortSignal: req.signal,
     });
