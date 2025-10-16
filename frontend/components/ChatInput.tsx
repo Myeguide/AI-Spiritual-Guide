@@ -12,7 +12,7 @@ import { createMessage, createThread } from "@/frontend/dexie/queries";
 import { UIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { StopIcon } from "./ui/icons";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { useMessageSummary } from "../hooks/useMessageSummary";
 
 interface ChatInputProps {
