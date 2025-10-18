@@ -1,5 +1,5 @@
 import { User } from "@/types/user";
-import { create } from "zustand";
+import { create, Mutate, StoreApi } from "zustand";
 import { persist } from 'zustand/middleware';
 
 interface IAuth {
@@ -13,18 +13,23 @@ interface IAuth {
     isAuthenticated: () => boolean;
 }
 
-export const withStorageDOMEvents = (store: any) => {
+type StoreWithPersist = Mutate<
+    StoreApi<IAuth>,
+    [['zustand/persist', { user: User | null; token: string | null }]]
+>;
+
+export const withStorageDOMEvents = (store: StoreWithPersist) => {
     const storageEventCallback = (e: StorageEvent) => {
         if (e.key === store.persist.getOptions().name && e.newValue) {
             store.persist.rehydrate();
         }
-
-        window.addEventListener('storage', storageEventCallback);
-
-        return () => {
-            window.removeEventListener('storage', storageEventCallback);
-        };
     }
+
+    window.addEventListener('storage', storageEventCallback);
+
+    return () => {
+        window.removeEventListener('storage', storageEventCallback);
+    };
 }
 
 export const useUserStore = create<IAuth>()(

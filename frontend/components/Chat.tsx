@@ -1,17 +1,16 @@
-import { useChat } from '@ai-sdk/react';
-import Messages from './Messages';
-import ChatInput from './ChatInput';
-import ChatNavigator from './ChatNavigator';
-import { UIMessage } from 'ai';
-import { v4 as uuidv4 } from 'uuid';
-import { createMessage } from '@/frontend/dexie/queries';
-import { useAPIKeyStore } from '@/frontend/stores/APIKeyStore';
-import { useModelStore } from '@/frontend/stores/ModelStore';
-import ThemeToggler from './ui/ThemeToggler';
-import { SidebarTrigger, useSidebar } from './ui/sidebar';
-import { Button } from './ui/button';
-import { MessageSquareMore } from 'lucide-react';
-import { useChatNavigator } from '@/frontend/hooks/useChatNavigator';
+import { useChat } from "@ai-sdk/react";
+import Messages from "./Messages";
+import ChatInput from "./ChatInput";
+import ChatNavigator from "./ChatNavigator";
+import { UIMessage } from "ai";
+import { v4 as uuidv4 } from "uuid";
+import { createMessage } from "@/frontend/dexie/queries";
+import ThemeToggler from "./ui/ThemeToggler";
+import { SidebarTrigger, useSidebar } from "./ui/sidebar";
+import { Button } from "./ui/button";
+import { MessageSquareMore } from "lucide-react";
+import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
+import { useUserStore } from "@/frontend/stores/UserStore";
 
 interface ChatProps {
   threadId: string;
@@ -19,9 +18,7 @@ interface ChatProps {
 }
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
-  const { getKey } = useAPIKeyStore();
-  const selectedModel = useModelStore((state) => state.selectedModel);
-  const modelConfig = useModelStore((state) => state.getModelConfig());
+  const userConfig = useUserStore((state) => state.token);
 
   const {
     isNavigatorVisible,
@@ -48,9 +45,9 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     onFinish: async ({ parts }) => {
       const aiMessage: UIMessage = {
         id: uuidv4(),
-        parts: parts as UIMessage['parts'],
-        role: 'assistant',
-        content: '',
+        parts: parts as UIMessage["parts"],
+        role: "assistant",
+        content: "",
         createdAt: new Date(),
       };
 
@@ -61,10 +58,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       }
     },
     headers: {
-      [modelConfig.headerKey]: getKey(modelConfig.provider) || '',
-    },
-    body: {
-      model: selectedModel,
+      Authorization: `Bearer ${userConfig}`,
     },
   });
 
@@ -101,8 +95,8 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         className="fixed right-16 top-4 z-20"
         aria-label={
           isNavigatorVisible
-            ? 'Hide message navigator'
-            : 'Show message navigator'
+            ? "Hide message navigator"
+            : "Show message navigator"
         }
       >
         <MessageSquareMore className="h-5 w-5" />
@@ -120,7 +114,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
 
 const ChatSidebarTrigger = () => {
   const { state } = useSidebar();
-  if (state === 'collapsed') {
+  if (state === "collapsed") {
     return <SidebarTrigger className="fixed left-4 top-4 z-100" />;
   }
   return null;

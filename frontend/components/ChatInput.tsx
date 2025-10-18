@@ -8,12 +8,13 @@ import { UseChatHelpers } from "@ai-sdk/react";
 import { useParams } from "react-router";
 import { useNavigate } from "react-router";
 import { createMessage, createThread } from "@/frontend/dexie/queries";
-// import KeyPrompt from '@/frontend/components/KeyPrompt';
+import AuthForm from "@/frontend/components/AuthForm";
 import { UIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { StopIcon } from "./ui/icons";
 // import { toast } from "sonner";
 import { useMessageSummary } from "../hooks/useMessageSummary";
+import { useUserStore } from "../stores/UserStore";
 
 interface ChatInputProps {
   threadId: string;
@@ -50,6 +51,7 @@ function PureChatInput({
   stop,
 }: ChatInputProps) {
   // const canChat = useAPIKeyStore((state) => state.hasRequiredKeys());
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated());
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 72,
@@ -104,11 +106,12 @@ function PureChatInput({
     textareaRef,
     threadId,
     complete,
+    navigate,
   ]);
 
-  // if (!canChat) {
-  //   return <KeyPrompt />;
-  // }
+  if (!isAuthenticated) {
+    return <AuthForm />;
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
