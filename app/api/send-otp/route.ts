@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { sendOTP } from "@/lib/send-otp";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {

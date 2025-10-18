@@ -16,10 +16,9 @@ export async function sendOTP(
   try {
     // Generate OTP
     const code = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Check if user exists
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { phoneNumber },
     });
 
@@ -32,9 +31,8 @@ export async function sendOTP(
 
     // If user doesn't exist, create a temporary record
     if (!user) {
-      let user = null;
       try {
-        user = await prisma.user.create({
+        await prisma.user.create({
           data: {
             phoneNumber,
             firstName, // Provide default values if necessary
@@ -42,7 +40,6 @@ export async function sendOTP(
             age: age, // Or null if allowed
             email: email,
             otpCode: code,
-            // Thread: [],
           },
         });
       } catch (error) {

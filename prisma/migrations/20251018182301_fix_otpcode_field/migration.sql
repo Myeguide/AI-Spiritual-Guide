@@ -8,6 +8,7 @@ CREATE TABLE "User" (
     "phoneNumber" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "otpCode" TEXT NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -24,16 +25,29 @@ CREATE TABLE "UserMemory" (
 );
 
 -- CreateTable
-CREATE TABLE "OtpCode" (
+CREATE TABLE "Thread" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
-    "code" TEXT NOT NULL,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "isUsed" BOOLEAN NOT NULL DEFAULT false,
+    "title" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "lastMessageAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "conversationSummary" TEXT NOT NULL,
+
+    CONSTRAINT "Thread_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Message" (
+    "id" TEXT NOT NULL,
+    "threadId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "parts" JSONB NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "OtpCode_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -46,13 +60,22 @@ CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
 CREATE UNIQUE INDEX "UserMemory_userId_key" ON "UserMemory"("userId");
 
 -- CreateIndex
-CREATE INDEX "OtpCode_phoneNumber_idx" ON "OtpCode"("phoneNumber");
+CREATE INDEX "Thread_userId_lastMessageAt_idx" ON "Thread"("userId", "lastMessageAt");
 
 -- CreateIndex
-CREATE INDEX "OtpCode_code_idx" ON "OtpCode"("code");
+CREATE INDEX "Message_threadId_idx" ON "Message"("threadId");
+
+-- CreateIndex
+CREATE INDEX "Message_userId_idx" ON "Message"("userId");
+
+-- CreateIndex
+CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
 -- AddForeignKey
 ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Thread" ADD CONSTRAINT "Thread_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "Thread"("id") ON DELETE CASCADE ON UPDATE CASCADE;

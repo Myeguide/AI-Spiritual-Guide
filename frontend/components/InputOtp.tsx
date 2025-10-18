@@ -19,6 +19,7 @@ import {
 } from "@/frontend/components/ui/input-otp";
 import { useUserStore } from "../stores/UserStore";
 import { apiCall } from "@/utils/api-call";
+import { LoaderCircle } from "lucide-react";
 
 const FormSchema = z.object({
   pin: z
@@ -40,7 +41,7 @@ export default function InputOTPForm({
   email?: string;
   onVerified: () => void;
 }) {
-  const { setUser, setToken, setLoading } = useUserStore();
+  const { setUser, setToken, setLoading, loading } = useUserStore();
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: { pin: "" },
@@ -106,7 +107,7 @@ export default function InputOTPForm({
         />
 
         <Button type="submit" className="w-full">
-          Verify OTP
+          {loading ? <LoaderCircle className="animate-spin" /> : "Verify OTP"}
         </Button>
       </form>
     </Form>
