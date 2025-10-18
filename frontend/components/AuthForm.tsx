@@ -16,14 +16,14 @@ import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { MessageSquare } from "lucide-react";
+import { LoaderCircle, MessageSquare } from "lucide-react";
 import { PhoneInput } from "react-international-phone";
 import InputOTPForm from "@/frontend/components/InputOtp";
 import { apiCall } from "@/utils/api-call";
 import { toast } from "sonner";
 
 export default function AuthForm() {
-  const { setUser, setToken, setLoading } = useUserStore();
+  const { setUser, setToken, setLoading, loading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // Login state
@@ -56,11 +56,10 @@ export default function AuthForm() {
         setOtpVerified(true);
         return;
       } else {
-        alert(response.message || "Login failed");
+        toast.error("No account found with this phone number");
       }
     } catch (error) {
-      console.error("Login error:", error);
-      alert("An error occurred during login");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -86,7 +85,6 @@ export default function AuthForm() {
       }
     } catch (error) {
       console.error("Registration error:", error);
-      alert("An error occurred during registration");
     } finally {
       setLoading(false);
     }
@@ -142,7 +140,7 @@ export default function AuthForm() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                Login
+                {loading ? <LoaderCircle className="animate-spin" /> : "Login"}
               </Button>
             </form>
           </TabsContent>
@@ -214,7 +212,11 @@ export default function AuthForm() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                Generate OTP
+                {loading ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  "Generate OTP"
+                )}
               </Button>
             </form>
           </TabsContent>

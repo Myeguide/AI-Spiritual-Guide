@@ -108,7 +108,11 @@ function PureChatInput({
   ]);
 
   if (!isAuthenticated) {
-    return <AuthForm />;
+    return (
+      <div className="fixed inset-0 z-90 bg-background bg-opacity-90 flex items-center justify-center">
+        <AuthForm />
+      </div>
+    );
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
