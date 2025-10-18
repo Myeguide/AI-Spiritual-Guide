@@ -29,7 +29,7 @@ import { useNavigate } from "react-router";
 import { useUserStore } from "@/frontend/stores/UserStore";
 
 export function NavUser() {
-  const { user } = useUserStore();
+  const { user, logout } = useUserStore();
   const { firstName, lastName, phoneNumber } = user || {};
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
@@ -96,9 +96,7 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => fetch("/api/logout", { method: "POST" })}
-            >
+            <DropdownMenuItem onClick={() => logout()}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

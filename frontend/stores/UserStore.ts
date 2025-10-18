@@ -41,7 +41,23 @@ export const useUserStore = create<IAuth>()(
             setUser: (user) => set({ user }),
             setLoading: (loading) => set({ loading }),
             setToken: (token) => set({ token }),
-            logout: () => set({ user: null, token: null, loading: false }),
+            logout: async () => {
+                try {
+                    const res = await fetch("/api/logout", {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${get().token}`,
+                        },
+                    });
+                    if (res.status === 200) {
+                        set({ user: null, token: null, loading: false });
+                    } else {
+                        console.error("Logout failed:", res.status);
+                    }
+                } catch (e) {
+                    console.error("Logout error:", e);
+                }
+            },
             isAuthenticated: () => {
                 const { user, token } = get();
                 return !!user && !!token;

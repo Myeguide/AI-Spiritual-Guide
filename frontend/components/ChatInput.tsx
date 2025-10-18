@@ -13,8 +13,8 @@ import { UIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { StopIcon } from "./ui/icons";
 // import { toast } from "sonner";
-import { useMessageSummary } from "../hooks/useMessageSummary";
-import { useUserStore } from "../stores/UserStore";
+import { useMessageSummary } from "@/frontend/hooks/useMessageSummary";
+import { useUserStore } from "@/frontend/stores/UserStore";
 
 interface ChatInputProps {
   threadId: string;
@@ -86,8 +86,6 @@ function PureChatInput({
       complete(currentInput.trim(), {
         body: { threadId, messageId, isTitle: true },
       });
-    } else {
-      complete(currentInput.trim(), { body: { messageId, threadId } });
     }
 
     const userMessage = createUserMessage(messageId, currentInput.trim());

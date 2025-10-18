@@ -120,7 +120,7 @@ const PureFooter = () => {
       {!isAuthenticated() ? (
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline">Settings</Button>
+            <Button variant="outline">Login</Button>
           </DialogTrigger>
           <DialogTitle />
           <DialogContent className="p-0">

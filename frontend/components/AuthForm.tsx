@@ -18,7 +18,7 @@ import { Label } from "@/frontend/components/ui/label";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { MessageSquare } from "lucide-react";
 import { PhoneInput } from "react-international-phone";
-import InputOTPForm from "./InputOtp";
+import InputOTPForm from "@/frontend/components/InputOtp";
 import { apiCall } from "@/utils/api-call";
 import { toast } from "sonner";
 
@@ -46,19 +46,17 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: loginPhone }),
+      const response = await apiCall("/api/login", "POST", {
+        phoneNumber: loginPhone,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data.user);
-        setToken(data.token);
+      if (response.success) {
+        setUser(response.user);
+        setToken(response.token);
+        setOtpVerified(true);
+        return;
       } else {
-        alert(data.message || "Login failed");
+        alert(response.message || "Login failed");
       }
     } catch (error) {
       console.error("Login error:", error);
