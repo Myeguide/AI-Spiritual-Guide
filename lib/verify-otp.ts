@@ -1,46 +1,52 @@
 import { prisma } from "./prisma";
 
 export async function verifyOTP(
-    phoneNumber: string,
-    code: string
+  phoneNumber: string,
+  code: string
 ): Promise<{
-    success: boolean;
-    userId?: string;
-    message: string;
+  success: boolean;
+  userId?: string;
+  message: string;
 }> {
-    try {
-        const otpRecord = await prisma.otpCode.findFirst({
-            where: {
-                phoneNumber,
-                code,
-                isUsed: false,
-                expiresAt: { gt: new Date() },
-            },
-            include: { user: true },
-        });
+  try {
+    // Find the user by phone number
+    const user = await prisma.user.findUnique({
+      where: {
+        phoneNumber,
+      },
+    });
 
-        if (!otpRecord) {
-            return {
-                success: false,
-                message: "Invalid or expired OTP",
-            };
-        }
-
-        // Delete OTP after successful verification
-        await prisma.otpCode.delete({
-            where: { id: otpRecord.id },
-        });
-
-        return {
-            success: true,
-            userId: otpRecord.userId,
-            message: "OTP verified successfully",
-        };
-    } catch (error) {
-        console.error("[OTP] Verification error:", error);
-        return {
-            success: false,
-            message: "Verification failed",
-        };
+    if (!user) {
+      return {
+        success: false,
+        message: "User not found",
+      };
     }
+
+    // Check if the OTP matches
+    if (user.otpCode !== code) {
+      return {
+        success: false,
+        message: "Invalid OTP",
+      };
+    }
+
+    // OTP matches, clear the OTP field in the database
+    await prisma.user.update({
+      where: { phoneNumber },
+      data: { otpCode: "" }, // Clear the OTP after successful verification
+    });
+
+    return {
+      success: true,
+      userId: user.id,
+      message: "OTP verified successfully",
+    };
+  } catch (error) {
+    console.error("[OTP] Verification error:", error);
+    return {
+      success: false,
+      message: "Verification failed",
+    };
+  }
 }
