@@ -5,19 +5,29 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/frontend/components/ui/tabs";
-import { CardContent } from "@/frontend/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/frontend/components/ui/card";
 import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 import { useUserStore } from "@/frontend/stores/UserStore";
+import { MessageSquare } from "lucide-react";
+import { PhoneInput } from "react-international-phone";
+import InputOTPForm from "./InputOtp";
+import { apiCall } from "@/utils/api-call";
+import { toast } from "sonner";
 
 export default function AuthForm() {
   const { setUser, setToken, setLoading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // Login state
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [loginPhone, setLoginPhone] = useState("");
 
   // Register state
   const [registerName, setRegisterName] = useState({
@@ -26,17 +36,20 @@ export default function AuthForm() {
   });
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
+  const [registerAge, setRegisterAge] = useState("");
+
+  const [registeredUser, setRegisteredUser] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // TODO: Replace with your actual API call
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        body: JSON.stringify({ phoneNumber: loginPhone }),
       });
 
       const data = await response.json();
@@ -57,29 +70,21 @@ export default function AuthForm() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setLoading(true);
 
     try {
-      // TODO: Replace with your actual API call
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstname: registerName.firstName,
-          lastname: registerName.lastName,
-          email: registerEmail,
-          phone: registerPhone,
-        }),
+      const response = await apiCall("/api/send-otp", "POST", {
+        firstName: registerName.firstName,
+        lastName: registerName.lastName,
+        email: registerEmail,
+        age: parseInt(registerAge),
+        phoneNumber: registerPhone,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data.user);
-        setToken(data.token);
+      if (response.success) {
+        setRegisteredUser(response);
       } else {
-        alert(data.message || "Registration failed");
+        alert(response.error || response.message || "Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -89,98 +94,134 @@ export default function AuthForm() {
     }
   };
 
+  if (otpVerified) {
+    toast.success("OTP verified successfully");
+  }
+
+  if (registeredUser) {
+    return (
+      <InputOTPForm
+        phoneNumber={registerPhone}
+        firstName={registerName.firstName}
+        lastName={registerName.lastName}
+        email={registerEmail}
+        onVerified={() => setOtpVerified(true)}
+      />
+    );
+  }
+
   return (
-    <CardContent>
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "login" | "register")}
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="login">Login</TabsTrigger>
-          <TabsTrigger value="register">Register</TabsTrigger>
-        </TabsList>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          <CardTitle>Welcome to MyEternalGuide</CardTitle>
+        </div>
+        <CardDescription>
+          Login or create a new account to start chatting.
+        </CardDescription>
+      </CardHeader>
 
-        <TabsContent value="login">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="login-phone">Registered Phone Number</Label>
-              <Input
-                id="login-phone"
-                type="text"
-                placeholder="+1234567890"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Login
-            </Button>
-          </form>
-        </TabsContent>
+      <CardContent>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "login" | "register")}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="register">
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="register-firstname">FirstName</Label>
-              <Input
-                id="register-firstname"
-                type="text"
-                placeholder="John"
-                value={registerName.firstName}
-                onChange={(e) =>
-                  setRegisterName((prev) => ({
-                    ...prev,
-                    firstName: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-lastname">LastName</Label>
-              <Input
-                id="register-lastname"
-                type="text"
-                placeholder="Doe"
-                value={registerName.lastName}
-                onChange={(e) =>
-                  setRegisterName((prev) => ({
-                    ...prev,
-                    lastName: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-email">Email</Label>
-              <Input
-                id="register-email"
-                type="email"
-                placeholder="you@example.com"
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-phone">Phone</Label>
-              <Input
-                id="register-phone"
-                type="text"
-                placeholder="+1234567890"
-                value={registerPhone}
-                onChange={(e) => setRegisterPhone(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              Create Account
-            </Button>
-          </form>
-        </TabsContent>
-      </Tabs>
-    </CardContent>
+          <TabsContent value="login">
+            <form onSubmit={handleLogin} className="space-y-6 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="login-phone">Registered Phone Number</Label>
+                <PhoneInput
+                  defaultCountry="in"
+                  value={loginPhone}
+                  inputClassName="w-full"
+                  onChange={(phone) => setLoginPhone(phone)}
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Login
+              </Button>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="register">
+            <form onSubmit={handleRegister} className="space-y-6 mt-6">
+              <div className="space-y-2">
+                <Label htmlFor="register-firstname">First Name</Label>
+                <Input
+                  id="register-firstname"
+                  type="text"
+                  placeholder="John"
+                  value={registerName.firstName}
+                  onChange={(e) =>
+                    setRegisterName((prev) => ({
+                      ...prev,
+                      firstName: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-lastname">Last Name</Label>
+                <Input
+                  id="register-lastname"
+                  type="text"
+                  placeholder="Doe"
+                  value={registerName.lastName}
+                  onChange={(e) =>
+                    setRegisterName((prev) => ({
+                      ...prev,
+                      lastName: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-email">Email</Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-age">Age</Label>
+                <Input
+                  id="register-age"
+                  type="number"
+                  placeholder="30"
+                  value={registerAge}
+                  onChange={(e) => setRegisterAge(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-phone">Phone</Label>
+                <PhoneInput
+                  defaultCountry="in"
+                  placeholder="+1234567890"
+                  value={registerPhone}
+                  onChange={(phone) => setRegisterPhone(phone)}
+                  inputClassName="w-full"
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Generate OTP
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,6 @@
 import { classifyQuestion } from '@/lib/classification/question-classify';
+import { verifyToken } from '@/lib/generate-token';
+import { getMemorySummary, updateMemory } from '@/lib/user-memory';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, smoothStream } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,9 +11,14 @@ const MODEL_NAME = "gpt-4o";
 export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1] as string;
+    const userId = verifyToken(token) || "";
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
     });
+
+    const userMemory = await getMemorySummary(userId);
 
     // Classify the question and get routed response
     const routedQuestion = await classifyQuestion(
@@ -32,11 +39,21 @@ export async function POST(req: NextRequest) {
 
           === SPIRITUAL CONTEXT DOCUMENTS ===
           ${contextDocuments}
+
+          User Context:
+          ${userMemory || "No previous information about this user."}
         `;
 
     const result = streamText({
       model: openai(MODEL_NAME),
       messages,
+      onFinish: async ({ text: finalCompletion }) => {
+        await updateMemory({
+          userId,
+          lastUserMessage: messages[messages.length - 1].content,
+          lastAssistantMessage: finalCompletion,
+        }).catch(() => { });
+      },
       onError: (error) => {
         console.log('error', error);
       },
