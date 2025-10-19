@@ -1,10 +1,11 @@
-import { sendOTP } from "@/lib/services/send-otp";
 import { NextRequest, NextResponse } from "next/server";
+import { sendOTP } from "@/lib/services/send-otp";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { phoneNumber, lastName, firstName, email, age } = body;
+    const { phoneNumber } = body as { phoneNumber?: string };
+
     // Validate presence
     if (!phoneNumber?.trim()) {
       return NextResponse.json(
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Send OTP
-    const result = await sendOTP(phoneNumber, lastName, firstName, email, age);
+    const result = await sendOTP(phoneNumber);
 
     if (!result.success) {
       return NextResponse.json(
@@ -40,10 +41,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(
-      "[POST /api/send-otp] Error:",
-      error instanceof Error ? error.message : error
-    );
+    console.error("[POST /api/send-otp] Error:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

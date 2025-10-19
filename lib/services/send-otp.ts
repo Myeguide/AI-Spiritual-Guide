@@ -1,14 +1,8 @@
-import { prisma } from "@/lib/prisma";
-import { twilioClient } from "@/lib/twilio";
+import { prisma } from "../prisma";
+import { twilioClient } from "../twilio";
 
 // Send OTP via SMS
-export async function sendOTP(
-  phoneNumber: string,
-  lastName: string,
-  firstName: string,
-  email: string,
-  age: number
-): Promise<{
+export async function sendOTP(phoneNumber: string): Promise<{
   success: boolean;
   message: string;
   code?: string;
@@ -16,9 +10,10 @@ export async function sendOTP(
   try {
     // Generate OTP
     const code = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { phoneNumber },
     });
 
@@ -31,23 +26,28 @@ export async function sendOTP(
 
     // If user doesn't exist, create a temporary record
     if (!user) {
-      try {
-        await prisma.user.create({
-          data: {
-            phoneNumber,
-            firstName, // Provide default values if necessary
-            lastName,
-            age: age, // Or null if allowed
-            email: email,
-            otpCode: code,
-          },
-        });
-      } catch (error) {
-        console.log("error due to user create", error);
-      }
+      user = await prisma.user.create({
+        data: {
+          phoneNumber,
+          firstName: "",
+          lastName: "",
+          age: null,
+          email: ""
+        },
+      });
     }
-    console.log("user", user);
 
+    // Store new OTP
+    await prisma.otpCode.create({
+      data: {
+        userId: user.id,
+        phoneNumber,
+        code,
+        expiresAt,
+      },
+    });
+
+    // Send SMS
     await twilioClient.messages.create({
       body: `Your EternalGuide verification code is: ${code}\n\nValid for 10 minutes.`,
       from: process.env.TWILIO_PHONE_NUMBER,

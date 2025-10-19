@@ -41,7 +41,7 @@ model User {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   userMemory  UserMemory?
-  otpCode     String
+  otpCode     OtpCode[]
   Thread      Thread[]
 
   // Relations
@@ -49,6 +49,22 @@ model User {
   payments      Payment[]
 
   @@map("users")
+}
+
+// model otpcode
+model OtpCode {
+  id          String   @id @default(cuid())
+  userId      String
+  phoneNumber String
+  code        String
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phoneNumber])
+  @@index([code])
 }
 
 // Subscription model
