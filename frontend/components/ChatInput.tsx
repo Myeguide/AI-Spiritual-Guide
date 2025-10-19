@@ -15,9 +15,15 @@ import { StopIcon } from "./ui/icons";
 // import { toast } from "sonner";
 import { useMessageSummary } from "@/frontend/hooks/useMessageSummary";
 import { useUserStore } from "@/frontend/stores/UserStore";
+import { checkRateLimit } from "@/lib/rate-limiter";
+import { TokenLimitExceeded } from "./RateWarning";
 
 interface ChatInputProps {
   threadId: string;
+  rateLimitError: {
+    message: string;
+    details?: any;
+  } | null;
   input: UseChatHelpers["input"];
   status: UseChatHelpers["status"];
   setInput: UseChatHelpers["setInput"];
@@ -49,6 +55,7 @@ function PureChatInput({
   setInput,
   append,
   stop,
+  rateLimitError
 }: ChatInputProps) {
   // const canChat = useAPIKeyStore((state) => state.hasRequiredKeys());
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
@@ -62,7 +69,7 @@ function PureChatInput({
   const { id } = useParams();
 
   const isDisabled = useMemo(
-    () => !input.trim() || status === "streaming" || status === "submitted",
+    () => !input.trim() || status === "streaming" || status === "submitted" || !!rateLimitError,
     [input, status]
   );
 
@@ -70,7 +77,6 @@ function PureChatInput({
 
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
-
     if (
       !currentInput.trim() ||
       status === "streaming" ||
@@ -127,8 +133,11 @@ function PureChatInput({
     adjustHeight();
   };
 
+
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
+      {
+        rateLimitError && <TokenLimitExceeded navigate={navigate} reason={rateLimitError.message} />}
       <div className="bg-secondary rounded-t-[20px] p-2 pb-0 w-full">
         <div className="relative">
           <div className="flex flex-col">
@@ -169,6 +178,8 @@ function PureChatInput({
           </div>
         </div>
       </div>
+
+
     </div>
   );
 }
