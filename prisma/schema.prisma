@@ -14,6 +14,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  REFUNDED
+  FAILED
+}
+
 // model user
 model User {
   id          String      @id @default(cuid())
@@ -27,6 +43,97 @@ model User {
   userMemory  UserMemory?
   otpCode     String
   Thread      Thread[]
+
+  // Relations
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@map("users")
+}
+
+// Subscription model
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planType String             @map("plan_type") // 'monthly', 'annually', 'family'
+  status   SubscriptionStatus @default(PENDING)
+
+  // Razorpay IDs
+  razorpaySubscriptionId String? @map("razorpay_subscription_id")
+  razorpayPlanId         String? @map("razorpay_plan_id")
+  razorpayCustomerId     String? @map("razorpay_customer_id")
+
+  // Pricing
+  amount   Int // Amount in paise
+  currency String @default("INR")
+
+  // Dates
+  startDate       DateTime? @map("start_date")
+  endDate         DateTime? @map("end_date")
+  nextBillingDate DateTime? @map("next_billing_date")
+  cancelledAt     DateTime? @map("cancelled_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([razorpaySubscriptionId])
+  @@map("subscriptions")
+}
+
+// Payment model
+model Payment {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subscriptionId String        @map("subscription_id")
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  // Razorpay IDs
+  razorpayPaymentId String? @unique @map("razorpay_payment_id")
+  razorpayOrderId   String? @map("razorpay_order_id")
+  razorpaySignature String? @map("razorpay_signature")
+
+  // Payment details
+  amount   Int
+  currency String        @default("INR")
+  status   PaymentStatus @default(CREATED)
+  method   String?
+
+  // Additional info
+  description String?
+  notes       Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([razorpayPaymentId])
+  @@map("payments")
+}
+
+// Webhook event model (optional, can skip for testing)
+model WebhookEvent {
+  id          Int       @id @default(autoincrement())
+  eventId     String    @unique @map("event_id")
+  eventType   String    @map("event_type")
+  payload     Json
+  processed   Boolean   @default(false)
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([eventId])
+  @@index([processed])
+  @@map("webhook_events")
 }
 
 // model user memory

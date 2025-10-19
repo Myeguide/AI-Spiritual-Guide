@@ -1,4 +1,4 @@
-export const apiCall = async (endpoint: string, method: string, body: object) => {
+export const apiCall = async (endpoint: string, method: string, body?: object) => {
     const res = await fetch(endpoint, {
         method: method,
         headers: { "Content-Type": "application/json" },
@@ -6,6 +6,6 @@ export const apiCall = async (endpoint: string, method: string, body: object) =>
         body: JSON.stringify(body),
     });
     const data = await res.json();
- 
+
     return data;
 };

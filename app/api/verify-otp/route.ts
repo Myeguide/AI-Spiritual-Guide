@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyOTP } from "@/lib/verify-otp";
+import { verifyOTP } from "@/lib/services/verify-otp";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { generateToken } from "@/lib/generate-token";
