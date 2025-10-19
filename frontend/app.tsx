@@ -1,19 +1,21 @@
-import { BrowserRouter, Route, Routes } from 'react-router';
-import ChatLayout from './ChatLayout';
-import Home from './routes/Home';
-import Index from './routes/Index';
-import Thread from './routes/Thread';
+import { BrowserRouter, Route, Routes } from "react-router";
+import ChatLayout from "./ChatLayout";
+import Home from "./routes/Home";
+import Index from "./routes/Index";
+import Thread from "./routes/Thread";
+import PricingPage from "@/frontend/components/Pricing";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path='/' element={<Index />} />
-        <Route path='chat' element={<ChatLayout />}>
+        <Route path="/" element={<Index />} />
+        <Route path="chat" element={<ChatLayout />}>
           <Route index element={<Home />} />
-          <Route path=':id' element={<Thread />} />
+          <Route path=":id" element={<Thread />} />
         </Route>
-        <Route path='*' element={<p> Not found </p>} />
+        <Route path="/billing" element={<PricingPage />} />
+        <Route path="*" element={<p> Not found </p>} />
       </Routes>
     </BrowserRouter>
   );

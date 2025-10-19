@@ -1,5 +1,5 @@
-import { prisma } from "./prisma";
-import { twilioClient } from "./twilio";
+import { prisma } from "@/lib/prisma";
+import { twilioClient } from "@/lib/twilio";
 
 // Send OTP via SMS
 export async function sendOTP(
