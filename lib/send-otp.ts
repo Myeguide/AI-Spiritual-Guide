@@ -30,16 +30,46 @@ export async function sendOTP(
     }
 
     // If user doesn't exist, create a temporary record
+    console.log("prisma trye to create user")
+
+    const freeTier = await prisma.priorityTier.findUnique({
+      where: { name: 'free' }
+    });
+
+    if (!freeTier) {
+      throw new Error('Free tier not configured. Please contact support.');
+    }
+
+    const now = new Date();
+    const nextMonthReset = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1
+    );
+
     if (!user) {
       try {
         await prisma.user.create({
           data: {
             phoneNumber,
-            firstName, // Provide default values if necessary
+            firstName,
             lastName,
-            age: age, // Or null if allowed
+            age: age ?? null,
             email: email,
             otpCode: code,
+            tierId: freeTier.id,
+
+            // Initialize token tracking
+            tokensUsedLifetime: 0,
+            tokensUsedThisMin: 0,
+            tokensUsedThisMonth: 0,
+
+            // Set reset dates
+            minuteResetAt: now,
+            monthResetAt: nextMonthReset,
+
+            // No subscription expiry for free tier
+            subscriptionExpiresAt: null,
           },
         });
       } catch (error) {

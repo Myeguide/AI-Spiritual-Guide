@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../lib/generated/prisma"
@@ -14,32 +8,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model user
-model User {
-  id          String      @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String      @unique
-  age         Int?
-  phoneNumber String      @unique
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  userMemory  UserMemory?
-  otpCode     String
-  Thread      Thread[]
+model PriorityTier {
+  id              String  @id @default(cuid())
+  name            String  @unique
+  tokensPerMinute Int
+  tokensPerMonth  Int
+  price           Decimal @db.Decimal(10, 2)
+  validityDays    Int
+  User            User[]
 }
 
-// model user memory
+model User {
+  id                    String         @id @default(cuid())
+  firstName             String
+  lastName              String
+  email                 String         @unique
+  age                   Int?
+  phoneNumber           String         @unique
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  otpCode               String
+  minuteResetAt         DateTime       @default(now())
+  monthResetAt          DateTime
+  subscriptionExpiresAt DateTime?
+  tierId                String
+  tokensUsedLifetime    Int            @default(0)
+  tokensUsedThisMin     Int            @default(0)
+  tokensUsedThisMonth   Int            @default(0)
+  Thread                Thread[]
+  tokenHistory          TokenHistory[]
+  tier                  PriorityTier   @relation(fields: [tierId], references: [id])
+  userMemory            UserMemory?
+
+  @@index([tierId])
+  @@index([email])
+  @@index([subscriptionExpiresAt])
+}
+
+model TokenHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  tokens    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
 model UserMemory {
   id        String   @id @default(cuid())
   userId    String   @unique
-  content   String   @db.Text
+  content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// model thread
 model Thread {
   id                  String    @id @default(cuid())
   userId              String
@@ -47,20 +71,19 @@ model Thread {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   lastMessageAt       DateTime  @default(now())
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages            Message[]
   conversationSummary String
+  messages            Message[]
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, lastMessageAt])
 }
 
-// model message
 model Message {
   id        String   @id @default(cuid())
   threadId  String
   userId    String
-  role      String // "user" | "assistant" | "system"
-  content   String   @db.Text
+  role      String
+  content   String
   parts     Json
   createdAt DateTime @default(now())
   thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
