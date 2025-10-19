@@ -101,6 +101,7 @@ export default function AuthForm() {
         firstName={registerName.firstName}
         lastName={registerName.lastName}
         email={registerEmail}
+        age={parseInt(registerAge)}
         onVerified={() => setOtpVerified(true)}
       />
     );

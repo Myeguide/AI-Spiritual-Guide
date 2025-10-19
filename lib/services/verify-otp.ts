@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../prisma";
 
 export async function verifyOTP(
   phoneNumber: string,
@@ -9,37 +9,31 @@ export async function verifyOTP(
   message: string;
 }> {
   try {
-    // Find the user by phone number
-    const user = await prisma.user.findUnique({
+    const otpRecord = await prisma.otpCode.findFirst({
       where: {
         phoneNumber,
+        code,
+        isUsed: false,
+        expiresAt: { gt: new Date() },
       },
+      include: { user: true },
     });
 
-    if (!user) {
+    if (!otpRecord) {
       return {
         success: false,
-        message: "User not found",
+        message: "Invalid or expired OTP",
       };
     }
 
-    // Check if the OTP matches
-    if (user.otpCode !== code) {
-      return {
-        success: false,
-        message: "Invalid OTP",
-      };
-    }
-
-    // OTP matches, clear the OTP field in the database
-    await prisma.user.update({
-      where: { phoneNumber },
-      data: { otpCode: "" }, // Clear the OTP after successful verification
+    // Delete OTP after successful verification
+    await prisma.otpCode.delete({
+      where: { id: otpRecord.id },
     });
 
     return {
       success: true,
-      userId: user.id,
+      userId: otpRecord.userId,
       message: "OTP verified successfully",
     };
   } catch (error) {

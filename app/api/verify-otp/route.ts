@@ -7,12 +7,13 @@ import { generateToken } from "@/lib/generate-token";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json().catch(() => ({}));
-        const { phoneNumber, code, firstName, lastName, email } = body as {
+        const { phoneNumber, code, firstName, lastName, email, age } = body as {
             phoneNumber?: string;
             code?: string;
             firstName: string;
             lastName: string;
             email?: string;
+            age?: number
         };
 
         // 🧩 Input validation
@@ -51,7 +52,8 @@ export async function POST(req: NextRequest) {
                 data: {
                     firstName: firstName.trim(),
                     lastName: lastName.trim(),
-                    email
+                    email,
+                    age
                 },
             });
         }
