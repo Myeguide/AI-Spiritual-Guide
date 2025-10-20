@@ -3,7 +3,7 @@ import { generateText } from 'ai';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const openaiApiKey = process.env.OPENAI_API_KEY as string;
+  const openaiApiKey = process.env.OPENAI_API_KEY1 as string;
 
   if (!openaiApiKey) {
     return NextResponse.json(

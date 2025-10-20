@@ -9,13 +9,19 @@ datasource db {
 }
 
 model PriorityTier {
-  id              String  @id @default(cuid())
-  name            String  @unique
+  id              String   @id @default(cuid())
+  name            String   @unique
+  type            String   @unique
   tokensPerMinute Int
   tokensPerMonth  Int
-  price           Decimal @db.Decimal(10, 2)
+  price           String
   validityDays    Int
-  User            User[]
+  currency        String   @default("INR")
+  description     String?
+  features        String[]
+
+  @@index([name])
+  @@index([type])
 }
 
 model User {
@@ -35,10 +41,11 @@ model User {
   tokensUsedLifetime    Int            @default(0)
   tokensUsedThisMin     Int            @default(0)
   tokensUsedThisMonth   Int            @default(0)
+  subscriptions         Subscription[]
   Thread                Thread[]
   tokenHistory          TokenHistory[]
-  tier                  PriorityTier   @relation(fields: [tierId], references: [id])
   userMemory            UserMemory?
+  payments              Payment[]
 
   @@index([tierId])
   @@index([email])
@@ -53,6 +60,52 @@ model TokenHistory {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String             @map("user_id")
+  tokensPerMinute Int
+  tokensPerMonth  Int
+  planType        String             @map("plan_type")
+  amount          String
+  currency        String             @default("INR")
+  startDate       DateTime?          @map("start_date")
+  endDate         DateTime?          @map("end_date")
+  nextBillingDate DateTime?          @map("next_billing_date")
+  cancelledAt     DateTime?          @map("cancelled_at")
+  status          SubscriptionStatus @default(PENDING)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Payment         Payment[]
+
+  @@index([userId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String        @map("user_id")
+  subscriptionId    String        @map("subscription_id")
+  razorpayPaymentId String?       @unique @map("razorpay_payment_id")
+  razorpayOrderId   String?       @map("razorpay_order_id")
+  razorpaySignature String?       @map("razorpay_signature")
+  amount            String
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  method            String?
+  description       String?
+  notes             Json?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  subscription      Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([razorpayPaymentId])
+  @@map("payments")
 }
 
 model UserMemory {
@@ -91,4 +144,19 @@ model Message {
   @@index([threadId])
   @@index([userId])
   @@index([createdAt])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  REFUNDED
+  FAILED
 }

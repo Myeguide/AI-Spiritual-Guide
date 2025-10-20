@@ -1,0 +1,7 @@
+| Step | Command                                                 | Purpose                             |
+| ---- | ------------------------------------------------------- | ----------------------------------- |
+| 1    | `npx prisma validate`                                   | Ensure schema is valid              |
+| 2    | `npx prisma generate`                                   | Regenerate Prisma Client            |
+| 3A   | `npx prisma migrate dev --name add_priority_tier_model` | Safe migration                      |
+| 3B   | `npx prisma migrate reset`                              | Reset everything (drops all tables) |
+| 4    | `npx prisma studio`                                     | Visual check                        |
