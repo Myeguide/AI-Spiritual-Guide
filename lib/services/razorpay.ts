@@ -29,7 +29,7 @@ function getRazorpayInstance(): Razorpay {
  * Create a Razorpay order for payment
  */
 export async function createRazorpayOrder(
-    amount: number,
+    amount: string,
     currency: string,
     receipt: string,
     notes?: Record<string, any>
@@ -213,9 +213,13 @@ export async function refundPayment(
  * Generate a unique receipt ID
  */
 export function generateReceiptId(userId: string, planType: PlanType): string {
-    const timestamp = Date.now();
-    // Take first 8 chars of userId to keep receipt ID shorter
-    const shortUserId = userId.substring(0, 8);
+    const timestamp = Date.now().toString().slice(-8); // Last 8 digits of timestamp
+    const shortUserId = userId.substring(0, 6); // First 6 chars of userId
+
+    // Map plan types to shorter codes
+
+    // Format: rcpt_XXXXXX_XX_XXXXXXXX 
+    // Example: rcpt_abc123_PM_12345678 (26 chars max)
     return `rcpt_${shortUserId}_${planType}_${timestamp}`;
 }
 

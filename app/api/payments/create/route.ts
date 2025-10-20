@@ -18,6 +18,7 @@ import {
     PaymentError,
     DatabaseError
 } from '@/types/payment';
+import { getPlanByType } from '@/lib/rate-limiter';
 
 /**
  * POST /api/payments/create-order
@@ -40,16 +41,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Validate plan type
-        if (!isValidPlan(planType)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Invalid plan type. Must be: monthly, annually, or family'
-                },
-                { status: 400 }
-            );
-        }
 
         // Validate userId is a string (cuid)
         if (typeof userId !== 'string' || !userId.trim()) {
@@ -63,20 +54,20 @@ export async function POST(req: NextRequest) {
         }
 
         // Check if user already has an active subscription
-        const activeSubscription = await getUserActiveSubscription(userId);
-        if (activeSubscription) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'User already has an active subscription',
-                    currentPlan: activeSubscription.planType
-                },
-                { status: 409 }
-            );
-        }
+        // const activeSubscription = await getUserActiveSubscription(userId);
+        // if (activeSubscription) {
+        //     return NextResponse.json(
+        //         {
+        //             success: false,
+        //             error: 'User already has an active subscription',
+        //             currentPlan: activeSubscription.planType
+        //         },
+        //         { status: 409 }
+        //     );
+        // }
 
         // Get plan details
-        const plan = getPlanById(planType);
+        const plan = await getPlanByType(planType);
         if (!plan) {
             return NextResponse.json(
                 {
@@ -88,19 +79,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Create subscription record in database (status: pending)
-        const subscription = await createSubscription({
-            userId: userId,
-            planType: planType as PlanType,
-            amount: plan.amount,
-            currency: plan.currency,
-        });
+        const subscription = await createSubscription(plan, userId);
 
         // Generate receipt ID
         const receiptId = generateReceiptId(userId, planType as PlanType);
 
         // Create Razorpay order
         const order = await createRazorpayOrder(
-            plan.amount,
+            plan.price,
             plan.currency,
             receiptId,
             {
@@ -116,7 +102,7 @@ export async function POST(req: NextRequest) {
             userId: userId,
             subscriptionId: subscription.id,
             razorpayOrderId: order.id,
-            amount: plan.amount,
+            amount: plan.price,
             currency: plan.currency,
             description: `Payment for ${plan.name}`,
             notes: {

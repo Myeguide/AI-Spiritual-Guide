@@ -15,7 +15,7 @@ export interface Plan {
 
 export const plans: Plan[] = [
   {
-    type: "FREE",
+    type: "free",
     name: "Free",
     price: 0,
     displayPrice: "₹0",
@@ -30,7 +30,7 @@ export const plans: Plan[] = [
     ],
   },
   {
-    type: "monthly",
+    type: "premium-monthly",
     name: "Monthly",
     price: 499,
     displayPrice: "₹499",
@@ -49,7 +49,7 @@ export const plans: Plan[] = [
     ],
   },
   {
-    type: "annually",
+    type: "premium-yearly",
     name: "Annual",
     price: 1999,
     displayPrice: "₹1,999",
@@ -84,6 +84,33 @@ export const plans: Plan[] = [
       "Dedicated support",
       "Perfect for spiritual families",
     ],
+  },
+];
+
+export const planExtras = [
+  {
+    displayPrice: "₹0",
+    billingCycle: "Forever",
+    icon: <Sparkles className="w-6 h-6" />,
+  },
+  {
+    displayPrice: "₹499",
+    billingCycle: "per month",
+    icon: <Zap className="w-6 h-6" />,
+    popular: true,
+    badge: "Most Popular",
+  },
+  {
+    displayPrice: "₹1,999",
+    billingCycle: "per year",
+    icon: <Crown className="w-6 h-6" />,
+    badge: "Best Value",
+  },
+  {
+    displayPrice: "₹5,999",
+    billingCycle: "per year",
+    icon: <Users className="w-6 h-6" />,
+    badge: "Best for Families",
   },
 ];
 

@@ -11,6 +11,7 @@ import { Button } from "./ui/button";
 import { MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
+import { useState } from "react";
 
 interface ChatProps {
   threadId: string;
@@ -19,7 +20,10 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-
+  const [rateLimitError, setRateLimitError] = useState<{
+    message: string;
+    details?: any;
+  } | null>(null);
   const {
     isNavigatorVisible,
     handleToggleNavigator,
@@ -42,19 +46,40 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     id: threadId,
     initialMessages,
     experimental_throttle: 50,
-    onFinish: async ({ parts }) => {
+    onFinish: async (message) => {
+      // message now contains proper parts array
+      console.log("messages", message)
+      setRateLimitError(null);
       const aiMessage: UIMessage = {
-        id: uuidv4(),
-        parts: parts as UIMessage["parts"],
+        id: message.id,
+        parts: message.parts,  // This will have the correct parts structure
         role: "assistant",
-        content: "",
+        content: message.content,
         createdAt: new Date(),
       };
-
+      console.log("ai message", aiMessage);
       try {
         await createMessage(threadId, aiMessage);
       } catch (error) {
         console.error(error);
+      }
+    },
+    onResponse: async (response) => {
+      // Handle rate limit errors
+      if (response.status === 429) {
+        const errorData = await response.json();
+        console.error('Rate limit exceeded:', errorData);
+
+        setRateLimitError({
+          message: errorData.error,
+          details: errorData.details,
+        });
+      } else if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error:', errorData);
+      } else {
+        // Clear error on success
+        setRateLimitError(null);
       }
     },
     headers: {
@@ -85,6 +110,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
           append={append}
           setInput={setInput}
           stop={stop}
+          rateLimitError={rateLimitError}
         />
       </main>
       <ThemeToggler />
