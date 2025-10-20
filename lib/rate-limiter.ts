@@ -1,6 +1,6 @@
 
 import { prisma } from '@/lib/prisma'; // Adjust path to your prisma client
-
+import { SubscriptionStatus } from '@/lib/generated/prisma';
 // Types
 export interface RateLimitCheckResult {
   allowed: boolean;
@@ -422,31 +422,109 @@ export async function seedPriorityTiers(): Promise<void> {
   await prisma.priorityTier.createMany({
     data: [
       {
-        name: 'free',
+        name: "Free",
+        type: "free",
         tokensPerMinute: 10000,      // 10K TPM
-        tokensPerMonth: 30000,       // 30K lifetime
-        price: 0,
-        validityDays: 0              // Lifetime
+        tokensPerMonth: 30000,       // 30K total
+        price: "0",
+        validityDays: 0,             // Lifetime
+        description: "Perfect for trying out EternalGuide",
+        features: [
+          "5 free prompts",
+          "Basic spiritual guidance",
+          "Limited conversation history",
+          "Community support",
+        ],
       },
       {
-        name: 'premium-monthly',
+        name: "Monthly",
+        type: "premium-monthly",
         tokensPerMinute: 150000,     // 150K TPM
-        tokensPerMonth: 10000000,    // 10M per month
-        price: 499,
-        validityDays: 30
+        tokensPerMonth: 1000000,     // 1M per month
+        price: "499",
+        validityDays: 30,
+        description: "Best for regular seekers",
+        features: [
+          "Unlimited conversations",
+          "Advanced AI responses",
+          "Full conversation history",
+          "Priority support",
+          "WhatsApp integration",
+          "1M tokens per month",
+        ],
       },
       {
-        name: 'premium-yearly',
-        tokensPerMinute: 150000,     // 150K TPM
-        tokensPerMonth: 10000000,    // 10M per month
-        price: 1999,
-        validityDays: 365
-      }
+        name: "Annual",
+        type: "premium-yearly",
+        tokensPerMinute: 150000,     // same TPM
+        tokensPerMonth: 12000000,    // 12M yearly
+        price: "1999",
+        validityDays: 365,
+        description: "Save 67% with annual plan",
+        features: [
+          "Everything in Monthly",
+          "Save ₹4,000 annually",
+          "Extended token limits (12M)",
+          "Premium support",
+          "Early access to new features",
+          "Personalized guidance",
+        ],
+      },
+      {
+        name: "Family",
+        type: "family",
+        tokensPerMinute: 300000,     // doubled rate
+        tokensPerMonth: 50000000,    // 50M shared tokens
+        price: "5999",
+        validityDays: 365,
+        description: "Share wisdom with your family",
+        features: [
+          "Everything in Annual",
+          "Up to 4 family members",
+          "Shared token pool (50M)",
+          "Individual profiles & memories",
+          "Family dashboard",
+          "Dedicated support",
+          "Perfect for spiritual families",
+        ],
+      },
     ],
-    skipDuplicates: true
+    skipDuplicates: true,
   });
 
   console.log('Priority tiers seeded successfully');
+}
+
+
+class DatabaseError extends Error {
+  constructor(message: string, public originalError?: any) {
+    super(message);
+    this.name = 'DatabaseError';
+  }
+}
+
+
+
+/**
+ * Create a new subscription
+ */
+
+
+export async function getPlanByType(planType: 'free' | 'premium-monthly' | 'premium-yearly') {
+  try {
+    const plan = await prisma.priorityTier.findUnique({
+      where: { type: planType }
+    });
+
+    if (!plan) {
+      throw new Error(`Plan ${planType} not found`);
+    }
+
+    return plan;
+  } catch (error) {
+    console.error('Error fetching plan:', error);
+    throw error;
+  }
 }
 
 /**
