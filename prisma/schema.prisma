@@ -33,7 +33,7 @@ model User {
   phoneNumber           String         @unique
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
-  otpCode               String
+  otpCode               OtpCode[]
   minuteResetAt         DateTime       @default(now())
   monthResetAt          DateTime
   subscriptionExpiresAt DateTime?
@@ -50,6 +50,21 @@ model User {
   @@index([tierId])
   @@index([email])
   @@index([subscriptionExpiresAt])
+}
+
+model OtpCode {
+  id          String   @id @default(cuid())
+  userId      String
+  phoneNumber String
+  code        String
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phoneNumber])
+  @@index([code])
 }
 
 model TokenHistory {

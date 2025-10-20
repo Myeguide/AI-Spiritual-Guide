@@ -12,7 +12,6 @@ import {
 let razorpayInstance: Razorpay | null = null;
 
 function getRazorpayInstance(): Razorpay {
-    console.log("razorpayinstance", RAZORPAY_CONFIG)
     if (!razorpayInstance) {
         razorpayInstance = new Razorpay({
             key_id: RAZORPAY_CONFIG.key_id,
