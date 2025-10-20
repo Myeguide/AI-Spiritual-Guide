@@ -16,24 +16,88 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 // ============================================
 // SUBSCRIPTION QUERIES
 // ============================================
-
+interface CreateSubscriptionData {
+    userId: string;
+    planType: 'free' | 'premium-monthly' | 'premium-yearly';
+    amount: number; // Amount in paise
+    currency?: string;
+}
 export async function createSubscription(data: {
-    userId: string;  // Changed from number to string
-    planType: string;
-    amount: number;
+    name: string;
+    id: string;
+    type: string;
+    tokensPerMinute: number;
+    tokensPerMonth: number;
+    price: string;
+    validityDays: number;
     currency: string;
-}) {
+    description: string | null;
+    features: string[];
+}, userId) {
     try {
-        return await prisma.subscription.create({
+        // Get plan details from PriorityTier
+
+        // Calculate dates
+        const now = new Date();
+        const startDate = now;
+
+        // Calculate end date and next billing date
+        let endDate: Date;
+        let nextBillingDate: Date | null = null;
+
+        if (data.type === 'free') {
+            // Free plan never expires
+            endDate = new Date('2099-12-31'); // Far future date
+            nextBillingDate = null;
+        } else if (data.type === 'premium-monthly') {
+            // Monthly: expires in 30 days
+            endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            nextBillingDate = endDate; // Next billing is at expiry
+        } else if (data.type === 'premium-yearly') {
+            // Yearly: expires in 365 days
+            endDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+            nextBillingDate = endDate; // Next billing is at expiry
+        } else {
+            throw new Error(`Invalid plan type: ${data.type}`);
+        }
+
+        // Create subscription
+        console.log("end date", endDate, nextBillingDate)
+        const subscription = await prisma.subscription.create({
             data: {
-                userId: data.userId,
-                planType: data.planType,
-                amount: data.amount,
-                currency: data.currency,
+                amount: data.price,
+                userId: userId,
+                currency: data.currency || 'INR',
+
+                planType: data.type,
+                // Token limits from tier
+                tokensPerMinute: data.tokensPerMinute,
+                tokensPerMonth: data.tokensPerMonth,
+
+                // Dates
+                startDate,
+                endDate,
+                nextBillingDate,
+
+                // Status defaults to PENDING
                 status: SubscriptionStatus.PENDING,
             },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                    }
+                }
+            }
         });
+        console.log("create subscription", subscription)
+
+        return subscription;
     } catch (error) {
+        console.error('Create subscription error:', error);
         throw new DatabaseError('Failed to create subscription', error);
     }
 }
@@ -54,7 +118,7 @@ export async function updateSubscription(
     try {
         return await prisma.subscription.update({
             where: { id },
-            data,
+            data
         });
     } catch (error) {
         throw new DatabaseError('Failed to update subscription', error);
@@ -128,7 +192,7 @@ export async function createPayment(data: {
     userId: string;  // Changed from number to string
     subscriptionId?: string;
     razorpayOrderId: string;
-    amount: number;
+    amount: string;
     currency: string;
     description?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -215,54 +279,54 @@ export async function getUserPayments(userId: string) {  // Changed from number 
 // WEBHOOK QUERIES (Optional for testing)
 // ============================================
 
-export async function createWebhookEvent(data: {
-    eventId: string;
-    eventType: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload: Record<string, any>;
-}) {
-    try {
-        return await prisma.webhookEvent.create({
-            data: {
-                eventId: data.eventId,
-                eventType: data.eventType,
-                payload: data.payload,
-            },
-        });
-    } catch (error) {
-        // If unique constraint fails, event already exists
-        if (error instanceof Error && error.message.includes('Unique constraint')) {
-            throw new DatabaseError('Webhook event already processed', error);
-        }
-        throw new DatabaseError('Failed to create webhook event', error);
-    }
-}
+// export async function createWebhookEvent(data: {
+//     eventId: string;
+//     eventType: string;
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//     payload: Record<string, any>;
+// }) {
+//     try {
+//         return await prisma.webhookEvent.create({
+//             data: {
+//                 eventId: data.eventId,
+//                 eventType: data.eventType,
+//                 payload: data.payload,
+//             },
+//         });
+//     } catch (error) {
+//         // If unique constraint fails, event already exists
+//         if (error instanceof Error && error.message.includes('Unique constraint')) {
+//             throw new DatabaseError('Webhook event already processed', error);
+//         }
+//         throw new DatabaseError('Failed to create webhook event', error);
+//     }
+// }
 
-export async function markWebhookAsProcessed(eventId: string) {
-    try {
-        await prisma.webhookEvent.update({
-            where: { eventId },
-            data: {
-                processed: true,
-                processedAt: new Date(),
-            },
-        });
-    } catch (error) {
-        throw new DatabaseError('Failed to mark webhook as processed', error);
-    }
-}
+// export async function markWebhookAsProcessed(eventId: string) {
+//     try {
+//         await prisma.webhookEvent.update({
+//             where: { eventId },
+//             data: {
+//                 processed: true,
+//                 processedAt: new Date(),
+//             },
+//         });
+//     } catch (error) {
+//         throw new DatabaseError('Failed to mark webhook as processed', error);
+//     }
+// }
 
-export async function isWebhookProcessed(eventId: string): Promise<boolean> {
-    try {
-        const event = await prisma.webhookEvent.findUnique({
-            where: { eventId },
-            select: { processed: true },
-        });
-        return event?.processed || false;
-    } catch {
-        return false;
-    }
-}
+// export async function isWebhookProcessed(eventId: string): Promise<boolean> {
+//     try {
+//         const event = await prisma.webhookEvent.findUnique({
+//             where: { eventId },
+//             select: { processed: true },
+//         });
+//         return event?.processed || false;
+//     } catch {
+//         return false;
+//     }
+// }
 
 // ============================================
 // USER QUERIES

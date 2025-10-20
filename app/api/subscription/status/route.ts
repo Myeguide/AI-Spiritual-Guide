@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
+import {
   getUserActiveSubscription,
-  getUserSubscriptions 
+  getUserSubscriptions
 } from '@/lib/prisma';
 import { isSubscriptionActive } from '@/lib/services/razorpay';
 
@@ -13,12 +13,11 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-
     if (!userId) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'userId is required' 
+        {
+          success: false,
+          error: 'userId is required'
         },
         { status: 400 }
       );
@@ -27,9 +26,9 @@ export async function GET(req: NextRequest) {
     // Validate userId is a string
     if (typeof userId !== 'string') {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid userId' 
+        {
+          success: false,
+          error: 'Invalid userId'
         },
         { status: 400 }
       );
@@ -37,7 +36,6 @@ export async function GET(req: NextRequest) {
 
     // Get active subscription
     const activeSubscription = await getUserActiveSubscription(userId);
-
     if (!activeSubscription) {
       return NextResponse.json({
         success: true,
@@ -54,6 +52,8 @@ export async function GET(req: NextRequest) {
       end_date: activeSubscription.endDate,
     });
 
+    console.log("is active", isActive)
+
     return NextResponse.json({
       success: true,
       data: {
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
           startDate: activeSubscription.startDate,
           endDate: activeSubscription.endDate,
           nextBillingDate: activeSubscription.nextBillingDate,
-          daysRemaining: activeSubscription.endDate 
+          daysRemaining: activeSubscription.endDate
             ? Math.ceil((new Date(activeSubscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : null,
         },
@@ -77,9 +77,9 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Get subscription status error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch subscription status' 
+      {
+        success: false,
+        error: 'Failed to fetch subscription status'
       },
       { status: 500 }
     );
@@ -97,9 +97,9 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'userId is required' 
+        {
+          success: false,
+          error: 'userId is required'
         },
         { status: 400 }
       );
@@ -108,9 +108,9 @@ export async function POST(req: NextRequest) {
     const userIdNum = parseInt(userId);
     if (isNaN(userIdNum)) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid userId' 
+        {
+          success: false,
+          error: 'Invalid userId'
         },
         { status: 400 }
       );
@@ -140,9 +140,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Get subscription history error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch subscription history' 
+      {
+        success: false,
+        error: 'Failed to fetch subscription history'
       },
       { status: 500 }
     );

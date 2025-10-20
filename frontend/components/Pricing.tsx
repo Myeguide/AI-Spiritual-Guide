@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PricingCard } from "./PricingCard";
-import { plans, RazorpayOptions, SubscriptionStatus } from "@/types/plan";
+import { planExtras, RazorpayOptions, SubscriptionStatus } from "@/types/plan";
 import { useUserStore } from "../stores/UserStore";
 import { useNavigate } from "react-router";
 import { apiCall } from "@/utils/api-call";
@@ -19,6 +19,7 @@ export default function PricingPage() {
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
+  const [plans, setPlans] = useState([]);
   const navigate = useNavigate();
 
   // Load Razorpay script
@@ -54,12 +55,43 @@ export default function PricingPage() {
     fetchUserAndSubscription();
   }, []);
 
+  useEffect(() => {
+    const getAllPlans = async () => {
+      try {
+        const response = await fetch("/api/priority-tier");
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch plans: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("data", data)
+        // Merge by index
+        const plansWithExtras = data.data.map((item: any, index: number) => ({
+          ...item,
+          ...(planExtras[index] || {}), // Fallback to empty object if index doesn't exist
+        }));
+
+        setPlans(plansWithExtras);
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+      }
+    };
+
+    getAllPlans();
+  }, []);
+
+
+
+
+
   const fetchUserAndSubscription = async () => {
     try {
       const subscriptionResponse = await fetch(
         `/api/subscription/status?userId=${user?.id}`
       );
       const subscriptionData = await subscriptionResponse.json();
+    
       if (subscriptionData.success) {
         setSubscriptionStatus(subscriptionData.data);
         if (subscriptionData.data.hasActiveSubscription) {
@@ -77,7 +109,7 @@ export default function PricingPage() {
 
   const handleSubscribe = async (planType: string) => {
     // Free plan - just redirect to chat
-    if (planType === "FREE") {
+    if (planType === "free") {
       navigate("/chat");
       return;
     }
@@ -147,8 +179,7 @@ export default function PricingPage() {
             setCurrentPlan(planType);
 
             alert(
-              `🎉 Payment Successful!\n\nYou are now subscribed to the ${
-                orderResponse.data.planName
+              `🎉 Payment Successful!\n\nYou are now subscribed to the ${orderResponse.data.planName
               }.\nYour subscription is active until ${new Date(
                 verifyResponse.data.endDate
               ).toLocaleDateString()}`
@@ -164,10 +195,9 @@ export default function PricingPage() {
           } catch (error) {
             console.error("Payment verification error:", error);
             alert(
-              `Payment Verification Failed\n\n${
-                error instanceof Error
-                  ? error.message
-                  : "Please contact support with your payment ID"
+              `Payment Verification Failed\n\n${error instanceof Error
+                ? error.message
+                : "Please contact support with your payment ID"
               }`
             );
           } finally {
@@ -197,8 +227,7 @@ export default function PricingPage() {
     } catch (error) {
       console.error("Subscribe error:", error);
       alert(
-        `Subscription Failed\n\n${
-          error instanceof Error ? error.message : "Please try again later"
+        `Subscription Failed\n\n${error instanceof Error ? error.message : "Please try again later"
         }`
       );
       setLoading("");
@@ -230,7 +259,7 @@ export default function PricingPage() {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {plans.map((plan) => (
+          {plans?.map((plan) => (
             <PricingCard
               key={plan.type}
               plan={plan}

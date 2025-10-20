@@ -4,7 +4,6 @@ import { UIMessage } from 'ai';
 import { UseChatHelpers } from '@ai-sdk/react';
 import equal from 'fast-deep-equal';
 import MessageLoading from './ui/MessageLoading';
-import Error from './Error';
 
 function PureMessages({
   threadId,
@@ -40,7 +39,7 @@ function PureMessages({
         />
       ))}
       {status === 'submitted' && <MessageLoading />}
-      {error && <Error message={error.message} />}
+      {/* {error && <Error message={error.message} />} */}
     </section>
   );
 }
