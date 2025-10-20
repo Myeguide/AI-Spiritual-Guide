@@ -28,7 +28,7 @@ export async function createSubscription(data: {
     type: string;
     tokensPerMinute: number;
     tokensPerMonth: number;
-    price: Decimal;
+    price: string;
     validityDays: number;
     currency: string;
     description: string | null;
@@ -62,7 +62,7 @@ export async function createSubscription(data: {
         }
 
         // Create subscription
-        console.log("end date", endDate)
+        console.log("end date", endDate, nextBillingDate)
         const subscription = await prisma.subscription.create({
             data: {
                 amount: data.price,
@@ -93,6 +93,7 @@ export async function createSubscription(data: {
                 }
             }
         });
+        console.log("create subscription", subscription)
 
         return subscription;
     } catch (error) {
@@ -278,54 +279,54 @@ export async function getUserPayments(userId: string) {  // Changed from number 
 // WEBHOOK QUERIES (Optional for testing)
 // ============================================
 
-export async function createWebhookEvent(data: {
-    eventId: string;
-    eventType: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload: Record<string, any>;
-}) {
-    try {
-        return await prisma.webhookEvent.create({
-            data: {
-                eventId: data.eventId,
-                eventType: data.eventType,
-                payload: data.payload,
-            },
-        });
-    } catch (error) {
-        // If unique constraint fails, event already exists
-        if (error instanceof Error && error.message.includes('Unique constraint')) {
-            throw new DatabaseError('Webhook event already processed', error);
-        }
-        throw new DatabaseError('Failed to create webhook event', error);
-    }
-}
+// export async function createWebhookEvent(data: {
+//     eventId: string;
+//     eventType: string;
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//     payload: Record<string, any>;
+// }) {
+//     try {
+//         return await prisma.webhookEvent.create({
+//             data: {
+//                 eventId: data.eventId,
+//                 eventType: data.eventType,
+//                 payload: data.payload,
+//             },
+//         });
+//     } catch (error) {
+//         // If unique constraint fails, event already exists
+//         if (error instanceof Error && error.message.includes('Unique constraint')) {
+//             throw new DatabaseError('Webhook event already processed', error);
+//         }
+//         throw new DatabaseError('Failed to create webhook event', error);
+//     }
+// }
 
-export async function markWebhookAsProcessed(eventId: string) {
-    try {
-        await prisma.webhookEvent.update({
-            where: { eventId },
-            data: {
-                processed: true,
-                processedAt: new Date(),
-            },
-        });
-    } catch (error) {
-        throw new DatabaseError('Failed to mark webhook as processed', error);
-    }
-}
+// export async function markWebhookAsProcessed(eventId: string) {
+//     try {
+//         await prisma.webhookEvent.update({
+//             where: { eventId },
+//             data: {
+//                 processed: true,
+//                 processedAt: new Date(),
+//             },
+//         });
+//     } catch (error) {
+//         throw new DatabaseError('Failed to mark webhook as processed', error);
+//     }
+// }
 
-export async function isWebhookProcessed(eventId: string): Promise<boolean> {
-    try {
-        const event = await prisma.webhookEvent.findUnique({
-            where: { eventId },
-            select: { processed: true },
-        });
-        return event?.processed || false;
-    } catch {
-        return false;
-    }
-}
+// export async function isWebhookProcessed(eventId: string): Promise<boolean> {
+//     try {
+//         const event = await prisma.webhookEvent.findUnique({
+//             where: { eventId },
+//             select: { processed: true },
+//         });
+//         return event?.processed || false;
+//     } catch {
+//         return false;
+//     }
+// }
 
 // ============================================
 // USER QUERIES
