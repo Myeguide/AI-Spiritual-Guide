@@ -91,7 +91,7 @@ export default function PricingPage() {
         `/api/subscription/status?userId=${user?.id}`
       );
       const subscriptionData = await subscriptionResponse.json();
-      console.log("subscription data", subscriptionData)
+    
       if (subscriptionData.success) {
         setSubscriptionStatus(subscriptionData.data);
         if (subscriptionData.data.hasActiveSubscription) {

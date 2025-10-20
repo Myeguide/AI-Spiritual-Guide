@@ -13,7 +13,6 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    console.log("insdie sub states")
     if (!userId) {
       return NextResponse.json(
         {
@@ -37,7 +36,6 @@ export async function GET(req: NextRequest) {
 
     // Get active subscription
     const activeSubscription = await getUserActiveSubscription(userId);
-    console.log("user active subscription", activeSubscription)
     if (!activeSubscription) {
       return NextResponse.json({
         success: true,
