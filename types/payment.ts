@@ -3,7 +3,7 @@ import { SubscriptionStatus, PaymentStatus } from '@/lib/generated/prisma';
 
 // Plan types (not in Prisma enum, so we define here)
 export enum PlanType {
-
+  FREE = 'free',
   MONTHLY = 'premium-monthly',
   ANNUALLY = 'premium-annually',
   FAMILY = 'family'

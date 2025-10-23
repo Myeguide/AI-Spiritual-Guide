@@ -46,7 +46,7 @@ export default function AuthForm() {
     setLoading(true);
 
     try {
-      const response = await apiCall("/api/login", "POST", {
+      const response = await apiCall("/api/auth/login", "POST", {
         phoneNumber: loginPhone,
       });
 

@@ -1,49 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
-import { sendOTP } from "@/lib/services/send-otp";
+import { NextRequest, NextResponse } from 'next/server';
+import { OTPService } from '@/lib/services/otp.service';
+import { SMSService } from '@/lib/services/sms.service';
+import { sendOTPSchema } from '@/lib/validators/auth.validator';
+import z from 'zod';
+import { seedSubscriptionTiers } from '@/lib/rate-limiter';
 
-export async function POST(req: NextRequest) {
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const { phoneNumber } = body as { phoneNumber?: string };
+    const body = await request.json();
 
-    // Validate presence
-    if (!phoneNumber?.trim()) {
-      return NextResponse.json(
-        { success: false, error: "Phone number is required" },
-        { status: 400 }
-      );
-    }
+    // const res = seedSubscriptionTiers()
 
-    // Validate format using E.164 (international) standard
-    const phoneRegex = /^\+?[1-9]\d{7,14}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid phone number format" },
-        { status: 400 }
-      );
-    }
+    // Validate input
+    const { phoneNumber } = sendOTPSchema.parse(body);
 
-    // Send OTP
-    const result = await sendOTP(phoneNumber);
+    // Generate and save OTP
+    const code = await OTPService.createOTP(phoneNumber);
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.message || "Failed to send OTP" },
-        { status: 502 }
-      );
-    }
+    // Send OTP via SMS
+    await SMSService.sendOTP(phoneNumber, code);
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "OTP sent successfully",
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: 'OTP sent successfully'
+    });
+
   } catch (error) {
-    console.error("[POST /api/send-otp] Error:", error instanceof Error ? error.message : error);
+    console.error('Send OTP error:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: error.errors[0].message },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: 'Failed to send OTP' },
       { status: 500 }
     );
   }

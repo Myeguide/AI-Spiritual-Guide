@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const tiers = await prisma.priorityTier.findMany({
+        const tiers = await prisma.subscriptionTier.findMany({
             orderBy: {
                 id: "asc",
             },
