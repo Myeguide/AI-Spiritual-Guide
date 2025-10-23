@@ -30,7 +30,6 @@ CREATE TABLE "User" (
     "phoneNumber" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "otpCode" TEXT NOT NULL,
     "minuteResetAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "monthResetAt" TIMESTAMP(3) NOT NULL,
     "subscriptionExpiresAt" TIMESTAMP(3),
@@ -40,6 +39,19 @@ CREATE TABLE "User" (
     "tokensUsedThisMonth" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OtpCode" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "phoneNumber" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "isUsed" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "OtpCode_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -157,6 +169,12 @@ CREATE INDEX "User_email_idx" ON "User"("email");
 CREATE INDEX "User_subscriptionExpiresAt_idx" ON "User"("subscriptionExpiresAt");
 
 -- CreateIndex
+CREATE INDEX "OtpCode_phoneNumber_idx" ON "OtpCode"("phoneNumber");
+
+-- CreateIndex
+CREATE INDEX "OtpCode_code_idx" ON "OtpCode"("code");
+
+-- CreateIndex
 CREATE INDEX "TokenHistory_userId_createdAt_idx" ON "TokenHistory"("userId", "createdAt");
 
 -- CreateIndex
@@ -193,16 +211,19 @@ CREATE INDEX "Message_userId_idx" ON "Message"("userId");
 CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
 -- AddForeignKey
+ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "TokenHistory" ADD CONSTRAINT "TokenHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

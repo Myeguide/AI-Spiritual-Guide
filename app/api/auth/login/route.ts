@@ -1,11 +1,14 @@
 import { generateToken } from "@/lib/generate-token";
-import { prisma } from "@/lib/prisma";
+import { UserService } from "@/lib/services/user.service";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 // ============================================================================
-// Types & Interfaces
+// TODO: Need to be clean use service from user service
 // ============================================================================
+
+
+
 
 interface LoginRequestBody {
     phoneNumber: string;
@@ -148,41 +151,6 @@ function validateRequestBody(body: object): {
 // ============================================================================
 
 /**
- * Finds user by phone number
- * @param phoneNumber - Normalized phone number
- * @returns User object or null
- */
-async function findUserByPhone(
-    phoneNumber: string
-): Promise<UserResponse | null> {
-    try {
-        const user = await prisma.user.findUnique({
-            where: { phoneNumber },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                phoneNumber: true,
-                email: true,
-                age: true,
-            },
-        });
-
-        return user;
-    } catch (error) {
-        console.error("[Login] Database error:", {
-            phoneNumber: phoneNumber.substring(0, 5) + "***", // Log partial number for privacy
-            error: error instanceof Error ? error.message : "Unknown error",
-        });
-        throw new Error(ERROR_MESSAGES.DATABASE_ERROR);
-    }
-}
-
-// ============================================================================
-// Session Management
-// ============================================================================
-
-/**
  * Creates and sets session cookie
  * @param userId - User ID
  * @param phoneNumber - User phone number
@@ -300,7 +268,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<LoginResponse
         const { phoneNumber } = validation;
 
         // Step 3: Find user
-        const user = await findUserByPhone(phoneNumber);
+        const user = await UserService.getUserByPhoneOrEmail(phoneNumber);
+
         if (!user) {
             return createErrorResponse(
                 ERROR_MESSAGES.USER_NOT_FOUND,

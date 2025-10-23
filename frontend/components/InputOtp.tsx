@@ -52,7 +52,7 @@ export default function InputOTPForm({
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     setLoading(true);
     try {
-      const response = await apiCall("/api/verify-otp", "POST", {
+      const response = await apiCall("/api/auth/register", "POST", {
         phoneNumber,
         code: data.pin,
         firstName,

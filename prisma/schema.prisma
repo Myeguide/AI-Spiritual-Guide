@@ -8,94 +8,94 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model PriorityTier {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  type            String   @unique
-  tokensPerMinute Int
-  tokensPerMonth  Int
-  price           String
-  validityDays    Int
-  currency        String   @default("INR")
-  description     String?
-  features        String[]
+model SubscriptionTier {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  type          String         @unique
+  totalRequests Int            @map("total_requests")
+  price         String
+  validityDays  Int            @map("validity_days")
+  currency      String         @default("INR")
+  description   String?
+  features      String[]
+  Subscription  Subscription[]
 
   @@index([name])
   @@index([type])
+  @@map("subscription_tiers")
 }
 
 model User {
-  id                    String         @id @default(cuid())
-  firstName             String
-  lastName              String
-  email                 String         @unique
-  age                   Int?
-  phoneNumber           String         @unique
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  otpCode               OtpCode[]
-  minuteResetAt         DateTime       @default(now())
-  monthResetAt          DateTime
-  subscriptionExpiresAt DateTime?
-  tierId                String
-  tokensUsedLifetime    Int            @default(0)
-  tokensUsedThisMin     Int            @default(0)
-  tokensUsedThisMonth   Int            @default(0)
-  subscriptions         Subscription[]
-  Thread                Thread[]
-  tokenHistory          TokenHistory[]
-  userMemory            UserMemory?
-  payments              Payment[]
+  id          String   @id @default(cuid())
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  email       String   @unique
+  age         Int?
+  phoneNumber String   @unique @map("phone_number")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@index([tierId])
+  // Current active subscription tracking
+  activeSubscriptionId String? @unique @map("active_subscription_id")
+  requestsUsedLifetime Int     @default(0) @map("requests_used_lifetime")
+
+  // Relations
+  Thread       Thread[]
+  userMemory   UserMemory?
+  payments     Payment[]
+  Subscription Subscription[]
+  OtpCode      OtpCode[]
+
   @@index([email])
-  @@index([subscriptionExpiresAt])
+  @@index([activeSubscriptionId])
+  @@map("users")
 }
 
 model OtpCode {
   id          String   @id @default(cuid())
-  userId      String
+  userId      String?
   phoneNumber String
   code        String
   expiresAt   DateTime
   isUsed      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([phoneNumber])
   @@index([code])
 }
 
-model TokenHistory {
-  id        String   @id @default(cuid())
-  userId    String
-  tokens    Int
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-}
-
 model Subscription {
-  id              String             @id @default(cuid())
-  userId          String             @map("user_id")
-  tokensPerMinute Int
-  tokensPerMonth  Int
-  planType        String             @map("plan_type")
-  amount          String
-  currency        String             @default("INR")
-  startDate       DateTime?          @map("start_date")
-  endDate         DateTime?          @map("end_date")
-  nextBillingDate DateTime?          @map("next_billing_date")
-  cancelledAt     DateTime?          @map("cancelled_at")
-  status          SubscriptionStatus @default(PENDING)
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
-  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Payment         Payment[]
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  tierId   String @map("tier_id")
+  planType String @map("plan_type")
+  amount   String
+  currency String @default("INR")
+
+  // Request quota for THIS subscription
+  totalRequests Int @map("total_requests")
+  requestsUsed  Int @default(0) @map("requests_used")
+
+  // Subscription validity
+  startDate   DateTime? @map("start_date")
+  expiresAt   DateTime? @map("expires_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  status    SubscriptionStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier     SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  payments Payment[]
 
   @@index([userId])
+  @@index([tierId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("subscriptions")
 }
 
 model Payment {
@@ -113,8 +113,9 @@ model Payment {
   notes             Json?
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
-  subscription      Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([subscriptionId])

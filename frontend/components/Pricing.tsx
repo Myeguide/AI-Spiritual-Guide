@@ -4,6 +4,7 @@ import { planExtras, RazorpayOptions, SubscriptionStatus } from "@/types/plan";
 import { useUserStore } from "../stores/UserStore";
 import { useNavigate } from "react-router";
 import { apiCall } from "@/utils/api-call";
+import { PlanType } from "@/types/payment";
 
 declare global {
   interface Window {
@@ -15,7 +16,7 @@ declare global {
 export default function PricingPage() {
   const { user } = useUserStore();
   const [loading, setLoading] = useState<string>("");
-  const [currentPlan, setCurrentPlan] = useState<string>("FREE");
+  const [currentPlan, setCurrentPlan] = useState<string>(PlanType.FREE);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
@@ -58,7 +59,7 @@ export default function PricingPage() {
   useEffect(() => {
     const getAllPlans = async () => {
       try {
-        const response = await fetch("/api/priority-tier");
+        const response = await fetch("/api/subscription-tier");
 
         if (!response.ok) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
@@ -91,19 +92,19 @@ export default function PricingPage() {
         `/api/subscription/status?userId=${user?.id}`
       );
       const subscriptionData = await subscriptionResponse.json();
-    
+
       if (subscriptionData.success) {
         setSubscriptionStatus(subscriptionData.data);
         if (subscriptionData.data.hasActiveSubscription) {
           setCurrentPlan(subscriptionData.data.subscription.planType);
         } else {
-          setCurrentPlan("FREE");
+          setCurrentPlan(PlanType.FREE);
         }
       }
     } catch (error) {
       console.error("Failed to fetch user/subscription data:", error);
       // If no user session, assume FREE plan
-      setCurrentPlan("FREE");
+      setCurrentPlan(PlanType.FREE);
     }
   };
 
