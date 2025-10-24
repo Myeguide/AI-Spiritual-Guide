@@ -84,26 +84,24 @@ export default function PricingPage() {
 
 
 
-
-
   const fetchUserAndSubscription = async () => {
-    try {
-      const subscriptionResponse = await fetch(
-        `/api/subscription/status?userId=${user?.id}`
-      );
-      const subscriptionData = await subscriptionResponse.json();
+    if (!user?.id) {
+      setCurrentPlan(PlanType.FREE);
+      return;
+    }
 
-      if (subscriptionData.success) {
-        setSubscriptionStatus(subscriptionData.data);
-        if (subscriptionData.data.hasActiveSubscription) {
-          setCurrentPlan(subscriptionData.data.subscription.planType);
-        } else {
-          setCurrentPlan(PlanType.FREE);
-        }
+    try {
+      const res = await fetch(`/api/subscription/status?userId=${user.id}`);
+      const { success, data } = await res.json();
+      console.log("success", success, data)
+      if (success && data) {
+        setSubscriptionStatus(data);
+        setCurrentPlan(data.subscription?.planType || PlanType.FREE);
+      } else {
+        setCurrentPlan(PlanType.FREE);
       }
     } catch (error) {
-      console.error("Failed to fetch user/subscription data:", error);
-      // If no user session, assume FREE plan
+      console.error('Failed to fetch subscription:', error);
       setCurrentPlan(PlanType.FREE);
     }
   };
