@@ -65,22 +65,52 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       }
     },
     onResponse: async (response) => {
-      // Handle rate limit errors
-      if (response.status === 429) {
-        const errorData = await response.json();
-        console.error('Rate limit exceeded:', errorData);
+      // Read response body once, outside the conditionals
+      let errorData = null;
+      if (!response.ok) {
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+          errorData = { error: 'Unknown Error', message: 'Failed to parse server response' };
+        }
+      }
 
+      // Handle different error types
+      if (response.status === 403) {
+        console.error('Subscription error:', errorData);
         setRateLimitError({
-          message: errorData.error,
-          details: errorData.details,
+          message: errorData?.error || 'Subscription Error',
+          details: errorData?.message || 'Please check your subscription status',
+        });
+        console.log("here value being se for subscripiton")
+      } else if (response.status === 429) {
+        console.error('Rate limit exceeded:', errorData);
+        setRateLimitError({
+          message: errorData?.error || 'Request Limit Exceeded',
+          details: errorData?.message || 'You have reached your request limit',
+        });
+      } else if (response.status === 401) {
+        console.error('Unauthorized:', errorData);
+        setRateLimitError({
+          message: 'Unauthorized',
+          details: 'Please login again',
         });
       } else if (!response.ok) {
-        const errorData = await response.json();
         console.error('API error:', errorData);
+        setRateLimitError({
+          message: errorData?.error || 'Error',
+          details: errorData?.message || 'Something went wrong',
+        });
       } else {
         // Clear error on success
         setRateLimitError(null);
       }
+    },
+    onError: (error) => {
+      // Handle network or other errors
+      console.error('Chat error:', error);
+
     },
     headers: {
       Authorization: `Bearer ${userConfig}`,
