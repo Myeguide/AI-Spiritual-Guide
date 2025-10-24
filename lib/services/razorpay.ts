@@ -102,32 +102,6 @@ export function verifyPaymentSignature(
     }
 }
 
-/**
- * Verify webhook signature
- * Ensures webhook requests are genuinely from Razorpay
- */
-// export function verifyWebhookSignature(
-//     payload: string,
-//     signature: string
-// ): boolean {
-//     try {
-//         if (!RAZORPAY_CONFIG.webhook_secret) {
-//             console.error('Webhook secret not configured');
-//             return false;
-//         }
-
-//         const expectedSignature = crypto
-//             .createHmac('sha256', RAZORPAY_CONFIG.webhook_secret)
-//             .update(payload)
-//             .digest('hex');
-
-//         return expectedSignature === signature;
-//     } catch (error) {
-//         console.error('Webhook signature verification failed:', error);
-//         return false;
-//     }
-// }
-
 // ============================================
 // PAYMENT OPERATIONS
 // ============================================
@@ -223,45 +197,6 @@ export function generateReceiptId(userId: string, planType: PlanType): string {
     return `rcpt_${shortUserId}_${planType}_${timestamp}`;
 }
 
-/**
- * Calculate subscription end date based on plan
- */
-export function calculateSubscriptionEndDate(
-    planType: PlanType,
-    startDate: Date = new Date()
-): Date {
-    const endDate = new Date(startDate);
-
-    switch (planType) {
-        case PlanType.MONTHLY:
-            endDate.setMonth(endDate.getMonth() + 1);
-            break;
-        case PlanType.ANNUALLY:
-        case PlanType.FAMILY:
-            endDate.setFullYear(endDate.getFullYear() + 1);
-            break;
-    }
-
-    return endDate;
-}
-
-/**
- * Check if subscription is active and not expired
- */
-export function isSubscriptionActive(subscription: {
-    status: string;
-    end_date: Date | null;
-}): boolean {
-    if (subscription.status !== 'ACTIVE') {
-        return false;
-    }
-
-    if (subscription.end_date) {
-        return new Date() < new Date(subscription.end_date);
-    }
-
-    return true;
-}
 
 /**
  * Format amount from paise to rupees for display

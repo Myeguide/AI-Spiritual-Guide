@@ -4,11 +4,6 @@ import {
     generateReceiptId
 } from '@/lib/services/razorpay';
 import {
-    createSubscription,
-    createPayment,
-    getUserActiveSubscription
-} from '@/lib/prisma';
-import {
     getPlanById,
     isValidPlan,
     RAZORPAY_CONFIG
@@ -19,6 +14,8 @@ import {
     DatabaseError
 } from '@/types/payment';
 import { getPlanByType } from '@/lib/rate-limiter';
+import { SubscriptionService } from '@/lib/services/subscription.service';
+import { PaymentService } from '@/lib/services/payment.service';
 
 /**
  * POST /api/payments/create-order
@@ -53,20 +50,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Check if user already has an active subscription
-        // const activeSubscription = await getUserActiveSubscription(userId);
-        // if (activeSubscription) {
-        //     return NextResponse.json(
-        //         {
-        //             success: false,
-        //             error: 'User already has an active subscription',
-        //             currentPlan: activeSubscription.planType
-        //         },
-        //         { status: 409 }
-        //     );
-        // }
-
-        // Get plan details
         const plan = await getPlanByType(planType);
         if (!plan) {
             return NextResponse.json(
@@ -79,7 +62,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Create subscription record in database (status: pending)
-        const subscription = await createSubscription(plan, userId);
+        const subscription = await SubscriptionService.createSubscription(plan, userId);
 
         // Generate receipt ID
         const receiptId = generateReceiptId(userId, planType as PlanType);
@@ -98,7 +81,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Create payment record in database
-        await createPayment({
+        await PaymentService.createPayment({
             userId: userId,
             subscriptionId: subscription.id,
             razorpayOrderId: order.id,

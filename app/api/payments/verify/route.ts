@@ -1,50 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-    verifyPaymentSignature,
-    fetchRazorpayPayment,
-    calculateSubscriptionEndDate
-} from '@/lib/services/razorpay';
-import {
-    updatePayment,
-    getPaymentByOrderId,
-    getSubscriptionById,
-    updateSubscription
-} from '@/lib/prisma';
-import {
-    PaymentStatus,
-    SubscriptionStatus,
-    PaymentError,
-    DatabaseError,
-    PlanType
-} from '@/types/payment';
 
-/**
- * POST /api/payments/verify
- * Verifies payment signature and updates subscription status
- */
+import { PaymentService } from '@/lib/services/payment.service';
+import { SubscriptionService } from '@/lib/services/subscription.service';
+import { z } from 'zod';
+import { PaymentError, DatabaseError, PaymentStatus } from '@/types/payment';
+import { verifyPaymentSchema } from '@/lib/validators/payment.validator';
+import { fetchRazorpayPayment, verifyPaymentSignature } from '@/lib/services/razorpay';
+
 export async function POST(req: NextRequest) {
     try {
-        // Parse request body
+        // Parse and validate request body
         const body = await req.json();
+        const validatedData = verifyPaymentSchema.parse(body);
+
         const {
             razorpay_payment_id,
             razorpay_order_id,
             razorpay_signature,
             userId
-        } = body;
+        } = validatedData;
 
-        // Validate required fields
-        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !userId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Missing required payment verification fields'
-                },
-                { status: 400 }
-            );
-        }
-
-        // Verify payment signature
+        // 🔐 Verify payment signature
         const isValidSignature = verifyPaymentSignature(
             razorpay_order_id,
             razorpay_payment_id,
@@ -52,7 +28,8 @@ export async function POST(req: NextRequest) {
         );
 
         if (!isValidSignature) {
-            await updatePayment(razorpay_order_id, {
+            // Update payment as failed
+            await PaymentService.updatePayment(razorpay_order_id, {
                 razorpayPaymentId: razorpay_payment_id,
                 status: PaymentStatus.FAILED,
             });
@@ -66,8 +43,9 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Fetch payment details from our database
-        const payment = await getPaymentByOrderId(razorpay_order_id);
+        // 📦 Fetch payment details from database
+        const payment = await PaymentService.getPaymentByOrderId(razorpay_order_id);
+
         if (!payment) {
             return NextResponse.json(
                 {
@@ -78,7 +56,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Verify userId matches
+        // 🔒 Verify userId matches (security check)
         if (payment.userId !== userId) {
             return NextResponse.json(
                 {
@@ -89,68 +67,67 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Fetch payment details from Razorpay to get payment method
+        // 💳 Fetch payment method from Razorpay
         let paymentMethod = 'unknown';
         try {
             const razorpayPayment = await fetchRazorpayPayment(razorpay_payment_id);
             paymentMethod = razorpayPayment.method;
         } catch (error) {
-            console.error('Failed to fetch payment details:', error);
-            // Continue anyway, payment is verified
+            console.error('⚠️ Failed to fetch payment details from Razorpay:', error);
+            // Continue anyway, payment signature is verified
         }
 
-        // Update payment record
-        await updatePayment(razorpay_order_id, {
+        // ✅ Update payment record as captured
+        await PaymentService.updatePayment(razorpay_order_id, {
             razorpayPaymentId: razorpay_payment_id,
             razorpaySignature: razorpay_signature,
             status: PaymentStatus.CAPTURED,
             method: paymentMethod,
         });
 
-        // Update subscription if exists
-        if (payment.subscriptionId) {
-            const subscription = await getSubscriptionById(payment.subscriptionId);
-
-            if (subscription) {
-                const startDate = new Date();
-                const endDate = calculateSubscriptionEndDate(
-                    subscription.planType as PlanType,
-                    startDate
-                );
-
-                // Activate subscription
-                await updateSubscription(subscription.id, {
-                    status: SubscriptionStatus.ACTIVE,
-                    startDate: startDate,
-                    endDate: endDate,
-                    nextBillingDate: endDate,
-                });
-
-                return NextResponse.json({
-                    success: true,
-                    message: 'Payment verified and subscription activated successfully',
-                    data: {
-                        paymentId: razorpay_payment_id,
-                        subscriptionId: subscription.id,
-                        planType: subscription.planType,
-                        startDate: startDate.toISOString(),
-                        endDate: endDate.toISOString(),
-                    },
-                });
-            }
+        // 📋 Activate subscription if exists
+        if (!payment.subscriptionId) {
+            // Payment verified but no subscription (edge case)
+            return NextResponse.json({
+                success: true,
+                message: 'Payment verified successfully',
+                data: {
+                    paymentId: razorpay_payment_id,
+                },
+            });
         }
 
-        // Payment verified but no subscription (shouldn't happen in normal flow)
+        // ✅ Activate the subscription using your existing method
+        const activatedSubscription = await SubscriptionService.activateSubscription(
+            payment.subscriptionId
+        );
+
         return NextResponse.json({
             success: true,
-            message: 'Payment verified successfully',
+            message: 'Payment verified and subscription activated successfully',
             data: {
                 paymentId: razorpay_payment_id,
+                subscriptionId: activatedSubscription.id,
+                planType: activatedSubscription.planType,
+                startDate: activatedSubscription.startDate?.toISOString(),
+                expiresAt: activatedSubscription.expiresAt?.toISOString(),
+                totalRequests: activatedSubscription.totalRequests,
+                requestsUsed: activatedSubscription.requestsUsed,
             },
         });
 
     } catch (error) {
-        console.error('Payment verification error:', error);
+        console.error('❌ Payment verification error:', error);
+
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: error.errors[0].message
+                },
+                { status: 400 }
+            );
+        }
 
         if (error instanceof PaymentError) {
             return NextResponse.json(
@@ -180,15 +157,4 @@ export async function POST(req: NextRequest) {
             { status: 500 }
         );
     }
-}
-
-// Handle unsupported methods
-export async function GET() {
-    return NextResponse.json(
-        {
-            success: false,
-            error: 'Method not allowed'
-        },
-        { status: 405 }
-    );
 }
