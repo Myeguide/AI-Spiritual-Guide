@@ -183,6 +183,23 @@ export class SubscriptionService {
         return false;
     }
 
+    static isSubscriptionExpiredByDate(subscription: { expiresAt: Date | null }): boolean {
+        // null expiresAt means lifetime/no expiry
+        if (!subscription.expiresAt) {
+            return false;
+        }
+
+        const now = new Date();
+        return subscription.expiresAt < now;
+    }
+
+    /**
+     * Checks if subscription requests are exhausted
+     */
+    static isRequestsExhausted(subscription: { requestsUsed: number, totalRequests: number }): boolean {
+        return subscription.requestsUsed >= subscription.totalRequests;
+    }
+
     /**
      * Gets user's active subscription
      */
@@ -198,26 +215,12 @@ export class SubscriptionService {
                 }
             });
 
-            // If subscription exists, check if it's actually expired
-            if (subscription && this.isSubscriptionExpired(subscription)) {
-                // Auto-expire if needed
-                await prisma.subscription.update({
-                    where: { id: subscription.id },
-                    data: {
-                        status: SubscriptionStatus.EXPIRED,
-                        expiresAt: new Date()
-                    }
-                });
-                return null;
-            }
-
-            return subscription;
+            return subscription; // Return as-is, don't auto-expire here
         } catch (error) {
             console.error('Get active subscription error:', error);
             throw new DatabaseError('Failed to get active subscription', error);
         }
     }
-
     /**
      * Increments request usage for a subscription
      */

@@ -11,7 +11,7 @@ export class UserService {
     }) {
         // Get free tier details
         const freeTier = await prisma.subscriptionTier.findFirst({
-            where: { type: "free" }
+            where: { type: PlanType.FREE }
         });
 
         if (!freeTier) {

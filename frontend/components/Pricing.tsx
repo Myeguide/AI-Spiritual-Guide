@@ -16,11 +16,12 @@ declare global {
 export default function PricingPage() {
   const { user } = useUserStore();
   const [loading, setLoading] = useState<string>("");
-  const [currentPlan, setCurrentPlan] = useState<string>(PlanType.FREE);
+  const [currentPlan, setCurrentPlan] = useState<string>(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
   const [plans, setPlans] = useState([]);
+  const [showExpiredMessage, setShowExpiredMessage] = useState(false)
   const navigate = useNavigate();
 
   // Load Razorpay script
@@ -86,7 +87,8 @@ export default function PricingPage() {
 
   const fetchUserAndSubscription = async () => {
     if (!user?.id) {
-      setCurrentPlan(PlanType.FREE);
+      console.error('No user found');
+      setCurrentPlan(null);
       return;
     }
 
@@ -96,13 +98,18 @@ export default function PricingPage() {
       console.log("success", success, data)
       if (success && data) {
         setSubscriptionStatus(data);
-        setCurrentPlan(data.subscription?.planType || PlanType.FREE);
+        setCurrentPlan(data.subscription?.planType);
+        if (data?.totalSubscriptionsCount > 0) {
+          setShowExpiredMessage(true)
+        } else {
+          setShowExpiredMessage(false)
+        }
       } else {
-        setCurrentPlan(PlanType.FREE);
+        setCurrentPlan(null);
       }
     } catch (error) {
       console.error('Failed to fetch subscription:', error);
-      setCurrentPlan(PlanType.FREE);
+      setCurrentPlan(null);
     }
   };
 
@@ -237,6 +244,10 @@ export default function PricingPage() {
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white dark:from-gray-900 dark:to-gray-800 py-4 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
+        {!subscriptionStatus?.hasActiveSubscription && showExpiredMessage && (
+          <div className=" bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-4 py-1 rounded text-sm font-medium">
+            Your current plan has expired or you've used up all available requests. Please upgrade or renew your plan to continue.          </div>
+        )}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Choose Your Path
@@ -254,6 +265,7 @@ export default function PricingPage() {
                 ` • ${subscriptionStatus.subscription.daysRemaining} days remaining`}
             </div>
           )}
+
         </div>
 
         {/* Pricing Cards */}

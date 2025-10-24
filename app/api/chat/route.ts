@@ -1,6 +1,7 @@
 import { classifyQuestion } from '@/lib/classification/question-classify';
 import { verifyToken } from '@/lib/generate-token';
-import { checkRateLimit, recordTokenUsage } from '@/lib/rate-limiter';
+import { SubscriptionService } from '@/lib/services/subscription.service';
+import { UserService } from '@/lib/services/user.service';
 import { getMemorySummary, updateMemory } from '@/lib/user-memory';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, smoothStream } from 'ai';
@@ -15,45 +16,86 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const authHeader = req.headers.get("authorization");
     const token = authHeader?.split(" ")[1] as string;
-    const userId = verifyToken(token) || "";
 
-    if (!userId) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - No token provided' },
         { status: 401 }
       );
     }
 
-    // Estimate tokens before making the call
-    const estimatedTokens = Math.ceil(
-      messages.map((m: any) => m.content).join('').length / 4
-    ) + 1000; // Buffer for response + context
+    const userId = verifyToken(token);
 
-    // Check rate limit BEFORE processing
-    const rateLimitCheck = await checkRateLimit(userId, estimatedTokens);
-
-
-    if (!rateLimitCheck.allowed) {
+    if (!userId) {
       return NextResponse.json(
-        {
-          error: rateLimitCheck.reason,
-          details: {
-            tier: rateLimitCheck.tier,
-            tokensRemaining: rateLimitCheck.tokensRemaining,
-            retryAfter: rateLimitCheck.retryAfter,
-            limits: rateLimitCheck.limits,
-          }
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Tier': rateLimitCheck.tier,
-            'X-RateLimit-Remaining': rateLimitCheck.tokensRemaining?.toString() || '0',
-            'Retry-After': rateLimitCheck.retryAfter?.toString() || '60',
-          }
-        }
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
       );
     }
+
+    // Get user with active subscription
+    const user = await UserService.getUserById(userId);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get active subscription
+    const activeSubscription = await SubscriptionService.getActiveSubscription(userId);
+
+    if (!activeSubscription) {
+      return NextResponse.json({
+        success: false,
+        error: 'No active subscription found',
+        message: 'Please subscribe to a plan to continue using the service',
+        data: {
+          hasActiveSubscription: false,
+          subscription: null,
+        },
+      }, { status: 403 });
+    }
+
+    // Check if subscription has expired or requests exhausted
+    const isExpired = SubscriptionService.isSubscriptionExpiredByDate(activeSubscription);
+
+    if (isExpired) {
+      return NextResponse.json({
+        success: false,
+        error: 'Subscription expired',
+        message: 'Your subscription has expired or you have used all available requests. Please renew or upgrade your plan.',
+        data: {
+          hasActiveSubscription: false,
+          subscription: activeSubscription,
+          requestsUsed: activeSubscription.requestsUsed,
+          totalRequests: activeSubscription.totalRequests,
+          requestsRemaining: 0,
+        },
+      }, { status: 403 });
+    }
+
+    // Check remaining requests
+    const requestsRemaining = activeSubscription.totalRequests - activeSubscription.requestsUsed;
+
+    if (requestsRemaining <= 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Request limit reached',
+        message: 'You have used all your available requests. Please upgrade your plan.',
+        data: {
+          hasActiveSubscription: true,
+          subscription: activeSubscription,
+          requestsUsed: activeSubscription.requestsUsed,
+          totalRequests: activeSubscription.totalRequests,
+          requestsRemaining: 0,
+        },
+      }, { status: 429 });
+    }
+
+    // Increment request usage
+    await SubscriptionService.incrementRequestUsage(activeSubscription.id);
 
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
@@ -76,29 +118,21 @@ export async function POST(req: NextRequest) {
 
     const confidence = routedQuestion.confidence;
     const systemPrompt = `
-      You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
-      Confidence Level: ${(confidence * 100).toFixed(1)}%
-      When answering questions, use the following spiritual context documents to provide accurate, compassionate, and relevant information:
-      
-      === SPIRITUAL CONTEXT DOCUMENTS ===
-      ${contextDocuments}
-      
-      User Context:
-      ${userMemory || "No previous information about this user."}
-    `;
+    You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
+    Confidence Level: ${(confidence * 100).toFixed(1)}%
+    When answering questions, use the following spiritual context documents to provide accurate, compassionate, and relevant information:
+    
+    === SPIRITUAL CONTEXT DOCUMENTS ===
+    ${contextDocuments}
+    
+    User Context:
+    ${userMemory || "No previous information about this user."}
+  `;
 
     const result = streamText({
       model: openai(MODEL_NAME),
       messages,
       onFinish: async ({ text: finalCompletion, usage }) => {
-        const actualTokens = usage?.totalTokens || estimatedTokens;
-
-        try {
-          await recordTokenUsage(userId, actualTokens);
-          console.log(`✅ Recorded ${actualTokens} tokens for user ${userId}`);
-        } catch (error) {
-          console.error('Failed to record token usage:', error);
-        }
         try {
           await updateMemory({
             userId,
@@ -116,6 +150,7 @@ export async function POST(req: NextRequest) {
       experimental_transform: [smoothStream({ chunking: 'word' })],
       abortSignal: req.signal,
     });
+
     // Use textStream and manually create Response - this ensures onFinish works
     return result.toDataStreamResponse({
       sendReasoning: true,
@@ -125,17 +160,24 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
+    console.error('Request error:', error);
 
     // Check if it's a rate limit error
     if (error instanceof Error && error.message.includes('rate limit')) {
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: 'Rate limit exceeded',
+          message: error.message
+        },
         { status: 429 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      {
+        error: 'Internal Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
