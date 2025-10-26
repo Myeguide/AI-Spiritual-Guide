@@ -109,13 +109,10 @@ export async function POST(req: NextRequest) {
       messages[messages.length - 1].content
     );
 
-    const contextDocuments = routedQuestion.relevantDocuments
-      .map(
-        (doc: any) =>
-          `Title: ${doc.title}\nDescription: ${doc.description}\n\nContent: ${doc.content}`
-      )
-      .join("\n\n---\n\n");
+    console.log("Question asked--->", messages[messages.length - 1])
+    console.log("Selected document based on question", routedQuestion)
 
+    const contextDocuments = routedQuestion.templateContent
     const confidence = routedQuestion.confidence;
     const systemPrompt = `
     You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.

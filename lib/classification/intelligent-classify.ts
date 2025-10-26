@@ -289,6 +289,7 @@ export function intelligentClassify(question: string): {
         }
     }
 
+    // Return result if we have a decent keyword match
     if (bestScore >= 2) {
         const confidence = Math.min(0.5 + (bestScore * 0.1), 0.85);
         return {
@@ -299,14 +300,26 @@ export function intelligentClassify(question: string): {
         };
     }
 
+    // If we found 1 keyword match, return with low confidence
+    if (bestScore === 1) {
+        return {
+            type: matchedType,
+            confidence: 0.6,
+            reasoning: `Weak match: only 1 keyword found in ${matchedType}`,
+            keywords: matchedKeywords,
+        };
+    }
+
     // ============================================================
-    // ULTIMATE FALLBACK
+    // ULTIMATE FALLBACK - No keywords matched
     // ============================================================
 
+    // Return empty type with LOW confidence to trigger LLM fallback
     return {
-        type: "",
-        confidence: 0.98,
-        reasoning: "No specific patterns matched - providing general guidance",
+        type: "", // Empty type signals need for LLM classification
+        confidence: 0.4, // LOW confidence (not 0.98!)
+        reasoning: "No specific patterns matched - requires LLM classification",
         keywords: [],
     };
+
 }
