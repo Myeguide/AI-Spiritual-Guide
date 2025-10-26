@@ -4,7 +4,6 @@ import { planExtras, RazorpayOptions, SubscriptionStatus } from "@/types/plan";
 import { useUserStore } from "../stores/UserStore";
 import { useNavigate } from "react-router";
 import { apiCall } from "@/utils/api-call";
-import { PlanType } from "@/types/payment";
 
 declare global {
   interface Window {
