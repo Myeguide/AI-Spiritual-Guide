@@ -9,6 +9,9 @@ export class UserService {
         email: string;
         age?: number;
     }) {
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 2);
+
         // Get free tier details
         const freeTier = await prisma.subscriptionTier.findFirst({
             where: { type: PlanType.FREE }
@@ -51,7 +54,7 @@ export class UserService {
                     requestsUsed: 0,
                     status: "ACTIVE",
                     startDate: new Date(),
-                    expiresAt: new Date(Date.now() + freeTier.validityDays * 24 * 60 * 60 * 1000)
+                    expiresAt: expiryDate
                 }
             });
 

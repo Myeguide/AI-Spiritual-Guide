@@ -8,7 +8,6 @@ export async function GET() {
                 id: "asc",
             },
         });
-        console.log("got tiers", tiers)
 
         return NextResponse.json({ success: true, data: tiers }, { status: 200 });
     } catch (error) {

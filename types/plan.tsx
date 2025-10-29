@@ -90,25 +90,25 @@ export const plans: Plan[] = [
 export const planExtras = [
   {
     displayPrice: "₹0",
-    billingCycle: "Forever",
+    billingCycle: "5 Message",
     icon: <Sparkles className="w-6 h-6" />,
   },
   {
     displayPrice: "₹499",
-    billingCycle: "per month",
+    billingCycle: "50 Message",
     icon: <Zap className="w-6 h-6" />,
     popular: true,
     badge: "Most Popular",
   },
   {
     displayPrice: "₹1,999",
-    billingCycle: "per year",
+    billingCycle: "500 Message",
     icon: <Crown className="w-6 h-6" />,
     badge: "Best Value",
   },
   {
     displayPrice: "₹5,999",
-    billingCycle: "per year",
+    billingCycle: "1500 Message",
     icon: <Users className="w-6 h-6" />,
     badge: "Best for Families",
   },

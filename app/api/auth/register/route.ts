@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
                 email,
                 age
             });
-            console.log("✅ User and free subscription created successfully");
         } catch (error) {
             console.error("❌ Error creating user:", error);
 

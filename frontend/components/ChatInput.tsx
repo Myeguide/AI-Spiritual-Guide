@@ -15,13 +15,14 @@ import { StopIcon } from "./ui/icons";
 // import { toast } from "sonner";
 import { useMessageSummary } from "@/frontend/hooks/useMessageSummary";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { checkRateLimit } from "@/lib/rate-limiter";
 import { TokenLimitExceeded } from "./RateWarning";
+import { apiCall } from "@/utils/api-call";
 
 interface ChatInputProps {
   threadId: string;
   rateLimitError: {
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     details?: any;
   } | null;
   input: UseChatHelpers["input"];
@@ -55,7 +56,7 @@ function PureChatInput({
   setInput,
   append,
   stop,
-  rateLimitError
+  rateLimitError,
 }: ChatInputProps) {
   // const canChat = useAPIKeyStore((state) => state.hasRequiredKeys());
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
@@ -69,7 +70,11 @@ function PureChatInput({
   const { id } = useParams();
 
   const isDisabled = useMemo(
-    () => !input.trim() || status === "streaming" || status === "submitted" || !!rateLimitError,
+    () =>
+      !input.trim() ||
+      status === "streaming" ||
+      status === "submitted" ||
+      !!rateLimitError,
     [input, status]
   );
 
@@ -96,6 +101,10 @@ function PureChatInput({
 
     const userMessage = createUserMessage(messageId, currentInput.trim());
     await createMessage(threadId, userMessage);
+    await apiCall("/api/messages", "POST", {
+      threadId,
+      userMessage,
+    });
 
     append(userMessage);
     setInput("");
@@ -133,11 +142,14 @@ function PureChatInput({
     adjustHeight();
   };
 
-
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
-      {
-        rateLimitError && <TokenLimitExceeded navigate={navigate} reason={rateLimitError.message} />}
+      {rateLimitError && (
+        <TokenLimitExceeded
+          navigate={navigate}
+          reason={rateLimitError.details}
+        />
+      )}
       <div className="bg-secondary rounded-t-[20px] p-2 pb-0 w-full">
         <div className="relative">
           <div className="flex flex-col">
@@ -178,8 +190,6 @@ function PureChatInput({
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }
