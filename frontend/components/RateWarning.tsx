@@ -2,7 +2,7 @@ import React from "react";
 import { Alert, AlertDescription } from "./ui/alert";
 // import { Button } from "@/components/ui/button";
 import { Badge } from "./ui/badge";
-import { Crown, TrendingUp, Clock } from "lucide-react";
+import { Crown, TrendingUp, Clock, CircleAlert } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router";
 
@@ -76,11 +76,8 @@ export const HighTokenUsageWarning: React.FC<TokenProps> = ({
         </div>
         <p className="text-xs text-orange-700 dark:text-orange-300">
           You have used{" "}
-          {(
-            (authStatus.tokensUsed / authStatus.tokenLimit) *
-            100
-          ).toFixed(0)}
-          % of your monthly token limit.
+          {((authStatus.tokensUsed / authStatus.tokenLimit) * 100).toFixed(0)}%
+          of your monthly token limit.
         </p>
       </AlertDescription>
     </Alert>
@@ -128,7 +125,7 @@ export const UpgradeBanner: React.FC<NavigateProps> = ({
   reason,
 }) => (
   <div className="px-4 pb-2">
-    <Alert variant="destructive">
+    <Alert variant="destructive" className="border border-red-400">
       <AlertDescription className="flex items-center justify-between text-sm">
         <span>🚫 {reason || "You've reached your limit"}</span>
         <Button
@@ -150,9 +147,12 @@ export const TokenLimitExceeded: React.FC<NavigateProps> = ({
   reason,
 }) => (
   <div className="px-4 pb-2">
-    <Alert variant="destructive">
+    <Alert variant="destructive" className="border border-red-500">
       <AlertDescription className="flex items-center justify-between text-sm">
-        <span>🚫 {reason}</span>
+        <span className="flex items-center gap-4 text-red-500">
+          <CircleAlert size={24} aria-hidden="true" />
+          {reason}
+        </span>
         <Button
           size="sm"
           onClick={() => navigate("/billing")}

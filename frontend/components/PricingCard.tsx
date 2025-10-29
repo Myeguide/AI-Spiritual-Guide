@@ -26,7 +26,7 @@ export const PricingCard = ({
 }: PricingCardProps) => {
   const isCurrentPlan = currentPlan === plan.type;
   const isLoading = loading === plan.type;
-  const isFree = plan.type === "FREE";
+  const isFree = plan.type === "free";
   const isFamily = plan.type === "family";
 
   // Determine button text based on state
@@ -70,11 +70,11 @@ export const PricingCard = ({
         </div>
       )}
 
-      <CardHeader className="text-center pb-4">
-        <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 dark:text-purple-300">
+      <CardHeader className="text-center">
+        <div className="mx-auto w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 dark:text-purple-300">
           {plan.icon}
         </div>
-        <CardTitle className="text-2xl">{plan.name}</CardTitle>
+        <CardTitle className="text-2xl"></CardTitle>
         <CardDescription className="mt-2 text-gray-400">
           {plan.description}
         </CardDescription>
@@ -84,7 +84,7 @@ export const PricingCard = ({
         {/* Price */}
         <div className="text-center mb-6">
           <div className="flex items-baseline justify-center">
-            <span className="text-4xl font-bold">{plan.displayPrice}/</span>
+            <span className="text-2xl font-bold">{plan.displayPrice}/</span>
             <span className="text-gray-500 dark:text-gray-400">
               {plan.billingCycle}
             </span>
@@ -106,7 +106,7 @@ export const PricingCard = ({
 
       <CardFooter>
         <Button
-          className="w-full bg-black text-white"
+          className={`${isFree ? "hidden" : "w-full bg-black text-white"}`}
           variant={"outline"}
           size="lg"
           onClick={() => handleSubscribe(plan.type)}

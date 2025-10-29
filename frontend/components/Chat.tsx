@@ -3,7 +3,6 @@ import Messages from "./Messages";
 import ChatInput from "./ChatInput";
 import ChatNavigator from "./ChatNavigator";
 import { UIMessage } from "ai";
-import { v4 as uuidv4 } from "uuid";
 import { createMessage } from "@/frontend/dexie/queries";
 import ThemeToggler from "./ui/ThemeToggler";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
@@ -12,6 +11,7 @@ import { MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { useState } from "react";
+import { apiCall } from "@/utils/api-call";
 
 interface ChatProps {
   threadId: string;
@@ -22,6 +22,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
   const [rateLimitError, setRateLimitError] = useState<{
     message: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     details?: any;
   } | null>(null);
   const {
@@ -48,69 +49,74 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     experimental_throttle: 50,
     onFinish: async (message) => {
       // message now contains proper parts array
-      console.log("messages", message)
       setRateLimitError(null);
       const aiMessage: UIMessage = {
         id: message.id,
-        parts: message.parts,  // This will have the correct parts structure
+        parts: message.parts as UIMessage["parts"],
         role: "assistant",
         content: message.content,
         createdAt: new Date(),
       };
-      console.log("ai message", aiMessage);
       try {
         await createMessage(threadId, aiMessage);
+        await apiCall("/api/messages", "POST", {
+          threadId,
+          aiMessage,
+        });
       } catch (error) {
         console.error(error);
       }
     },
     onResponse: async (response) => {
       // Read response body once, outside the conditionals
-      let errorData = null;
+      let errorData: { error: string; message: string } | null = null;
       if (!response.ok) {
         try {
           errorData = await response.json();
         } catch (e) {
-          console.error('Failed to parse error response:', e);
-          errorData = { error: 'Unknown Error', message: 'Failed to parse server response' };
+          console.error("Failed to parse error response:", e);
+          errorData = {
+            error: "Unknown Error",
+            message: "Failed to parse server response",
+          };
         }
       }
 
       // Handle different error types
       if (response.status === 403) {
-        console.error('Subscription error:', errorData);
+        console.error("Subscription error:", errorData);
         setRateLimitError({
-          message: errorData?.error || 'Subscription Error',
-          details: errorData?.message || 'Please check your subscription status',
+          message: errorData?.error || "Subscription Error",
+          details:
+            errorData?.message || "Please check your subscription status",
         });
-        console.log("here value being se for subscripiton")
+        console.log("here value being se for subscripiton");
       } else if (response.status === 429) {
-        console.error('Rate limit exceeded:', errorData);
+        console.error("Rate limit exceeded:", errorData);
         setRateLimitError({
-          message: errorData?.error || 'Request Limit Exceeded',
-          details: errorData?.message || 'You have reached your request limit',
+          message: errorData?.error || "Request Limit Exceeded",
+          details: errorData?.message || "You have reached your request limit",
         });
       } else if (response.status === 401) {
-        console.error('Unauthorized:', errorData);
+        console.error("Unauthorized:", errorData);
         setRateLimitError({
-          message: 'Unauthorized',
-          details: 'Please login again',
+          message: "Unauthorized",
+          details: "Please login again",
         });
       } else if (!response.ok) {
-        console.error('API error:', errorData);
+        console.error("API error:", errorData);
         setRateLimitError({
-          message: errorData?.error || 'Error',
-          details: errorData?.message || 'Something went wrong',
+          message: errorData?.error || "Error",
+          details: errorData?.message || "Something went wrong",
         });
       } else {
         // Clear error on success
         setRateLimitError(null);
       }
     },
-    onError: (error) => {
+    onError: () => {
       // Handle network or other errors
-      console.error('Chat error:', error);
-
+      console.error("Chat error:", rateLimitError?.details);
     },
     headers: {
       Authorization: `Bearer ${userConfig}`,

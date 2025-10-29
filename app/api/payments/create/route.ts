@@ -4,8 +4,6 @@ import {
     generateReceiptId
 } from '@/lib/services/razorpay';
 import {
-    getPlanById,
-    isValidPlan,
     RAZORPAY_CONFIG
 } from '@/lib/config/payment.config';
 import {

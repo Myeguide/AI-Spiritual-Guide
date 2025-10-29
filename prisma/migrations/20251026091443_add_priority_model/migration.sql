@@ -5,46 +5,40 @@ CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'CANCELLED', 'EXPIRED', 'PEN
 CREATE TYPE "PaymentStatus" AS ENUM ('CREATED', 'AUTHORIZED', 'CAPTURED', 'REFUNDED', 'FAILED');
 
 -- CreateTable
-CREATE TABLE "PriorityTier" (
+CREATE TABLE "subscription_tiers" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "tokensPerMinute" INTEGER NOT NULL,
-    "tokensPerMonth" INTEGER NOT NULL,
+    "total_requests" INTEGER NOT NULL,
     "price" TEXT NOT NULL,
-    "validityDays" INTEGER NOT NULL,
+    "validity_days" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'INR',
     "description" TEXT,
     "features" TEXT[],
 
-    CONSTRAINT "PriorityTier_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "subscription_tiers_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "users" (
     "id" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastName" TEXT NOT NULL,
+    "first_name" TEXT NOT NULL,
+    "last_name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "age" INTEGER,
-    "phoneNumber" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "minuteResetAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "monthResetAt" TIMESTAMP(3) NOT NULL,
-    "subscriptionExpiresAt" TIMESTAMP(3),
-    "tierId" TEXT NOT NULL,
-    "tokensUsedLifetime" INTEGER NOT NULL DEFAULT 0,
-    "tokensUsedThisMin" INTEGER NOT NULL DEFAULT 0,
-    "tokensUsedThisMonth" INTEGER NOT NULL DEFAULT 0,
+    "phone_number" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "active_subscription_id" TEXT,
+    "requests_used_lifetime" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "OtpCode" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "userId" TEXT,
     "phoneNumber" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
@@ -55,33 +49,23 @@ CREATE TABLE "OtpCode" (
 );
 
 -- CreateTable
-CREATE TABLE "TokenHistory" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "tokens" INTEGER NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "TokenHistory_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Subscription" (
+CREATE TABLE "subscriptions" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
-    "tokensPerMinute" INTEGER NOT NULL,
-    "tokensPerMonth" INTEGER NOT NULL,
+    "tier_id" TEXT NOT NULL,
     "plan_type" TEXT NOT NULL,
     "amount" TEXT NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'INR',
+    "total_requests" INTEGER NOT NULL,
+    "requests_used" INTEGER NOT NULL DEFAULT 0,
     "start_date" TIMESTAMP(3),
-    "end_date" TIMESTAMP(3),
-    "next_billing_date" TIMESTAMP(3),
+    "expires_at" TIMESTAMP(3),
     "cancelled_at" TIMESTAMP(3),
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'PENDING',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -142,31 +126,31 @@ CREATE TABLE "Message" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PriorityTier_name_key" ON "PriorityTier"("name");
+CREATE UNIQUE INDEX "subscription_tiers_name_key" ON "subscription_tiers"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PriorityTier_type_key" ON "PriorityTier"("type");
+CREATE UNIQUE INDEX "subscription_tiers_type_key" ON "subscription_tiers"("type");
 
 -- CreateIndex
-CREATE INDEX "PriorityTier_name_idx" ON "PriorityTier"("name");
+CREATE INDEX "subscription_tiers_name_idx" ON "subscription_tiers"("name");
 
 -- CreateIndex
-CREATE INDEX "PriorityTier_type_idx" ON "PriorityTier"("type");
+CREATE INDEX "subscription_tiers_type_idx" ON "subscription_tiers"("type");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");
+CREATE UNIQUE INDEX "users_phone_number_key" ON "users"("phone_number");
 
 -- CreateIndex
-CREATE INDEX "User_tierId_idx" ON "User"("tierId");
+CREATE UNIQUE INDEX "users_active_subscription_id_key" ON "users"("active_subscription_id");
 
 -- CreateIndex
-CREATE INDEX "User_email_idx" ON "User"("email");
+CREATE INDEX "users_email_idx" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "User_subscriptionExpiresAt_idx" ON "User"("subscriptionExpiresAt");
+CREATE INDEX "users_active_subscription_id_idx" ON "users"("active_subscription_id");
 
 -- CreateIndex
 CREATE INDEX "OtpCode_phoneNumber_idx" ON "OtpCode"("phoneNumber");
@@ -175,10 +159,16 @@ CREATE INDEX "OtpCode_phoneNumber_idx" ON "OtpCode"("phoneNumber");
 CREATE INDEX "OtpCode_code_idx" ON "OtpCode"("code");
 
 -- CreateIndex
-CREATE INDEX "TokenHistory_userId_createdAt_idx" ON "TokenHistory"("userId", "createdAt");
+CREATE INDEX "subscriptions_user_id_idx" ON "subscriptions"("user_id");
 
 -- CreateIndex
-CREATE INDEX "Subscription_user_id_idx" ON "Subscription"("user_id");
+CREATE INDEX "subscriptions_tier_id_idx" ON "subscriptions"("tier_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_status_idx" ON "subscriptions"("status");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_expires_at_idx" ON "subscriptions"("expires_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payments_razorpay_payment_id_key" ON "payments"("razorpay_payment_id");
@@ -211,25 +201,25 @@ CREATE INDEX "Message_userId_idx" ON "Message"("userId");
 CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
 -- AddForeignKey
-ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TokenHistory" ADD CONSTRAINT "TokenHistory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_tier_id_fkey" FOREIGN KEY ("tier_id") REFERENCES "subscription_tiers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "subscriptions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Thread" ADD CONSTRAINT "Thread_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Thread" ADD CONSTRAINT "Thread_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "Thread"("id") ON DELETE CASCADE ON UPDATE CASCADE;

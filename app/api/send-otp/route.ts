@@ -3,7 +3,7 @@ import { OTPService } from '@/lib/services/otp.service';
 import { SMSService } from '@/lib/services/sms.service';
 import { sendOTPSchema } from '@/lib/validators/auth.validator';
 import z from 'zod';
-import { seedSubscriptionTiers } from '@/lib/rate-limiter';
+// import { seedSubscriptionTiers } from '@/lib/rate-limiter';
 
 
 export async function POST(request: NextRequest) {
@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // const res = seedSubscriptionTiers()
+    // return;
 
     // Validate input
     const { phoneNumber } = sendOTPSchema.parse(body);

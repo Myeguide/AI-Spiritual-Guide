@@ -12,6 +12,7 @@ import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { useUserStore } from "../stores/UserStore";
+import { apiCall } from "@/utils/api-call";
 
 export default function MessageEditor({
   threadId,
@@ -59,6 +60,10 @@ export default function MessageEditor({
   const handleSave = async () => {
     try {
       await deleteTrailingMessages(threadId, message.createdAt as Date);
+      await apiCall("/api/messages/delete-trailing", "DELETE", {
+        threadId,
+        createdAt: message.createdAt as Date,
+      });
 
       const updatedMessage = {
         ...message,
@@ -74,6 +79,10 @@ export default function MessageEditor({
       };
 
       await createMessage(threadId, updatedMessage);
+      await apiCall("/api/messages", "POST", {
+        threadId,
+        updatedMessage,
+      });
 
       setMessages((messages) => {
         const index = messages.findIndex((m) => m.id === message.id);

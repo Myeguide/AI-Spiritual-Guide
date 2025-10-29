@@ -43,8 +43,14 @@ export class SubscriptionService {
 
                 // If there's an existing subscription, close it
                 if (existingSubscription) {
-                    await this.closeSubscription(tx, existingSubscription.id, now);
-                    console.log("Closed previous subscription:", existingSubscription.id);
+                    // Close subscription directly using the transaction client
+                    await tx.subscription.update({
+                        where: { id: existingSubscription.id },
+                        data: {
+                            status: SubscriptionStatus.EXPIRED,
+                            expiresAt: now,
+                        }
+                    });
                 }
 
                 // Create new subscription
@@ -126,25 +132,6 @@ export class SubscriptionService {
             console.error('Activate subscription error:', error);
             throw new DatabaseError('Failed to activate subscription', error);
         }
-    }
-
-    /**
-     * Closes an existing subscription (marks as EXPIRED or CANCELLED)
-     */
-    private static async closeSubscription(
-        tx: any, // Prisma transaction client
-        subscriptionId: string,
-        closedAt: Date,
-        status: SubscriptionStatus = SubscriptionStatus.EXPIRED
-    ) {
-        return await tx.subscription.update({
-            where: { id: subscriptionId },
-            data: {
-                status: status,
-                cancelledAt: closedAt,
-                expiresAt: closedAt,
-            }
-        });
     }
 
     /**

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'No active subscription found',
-        message: 'Please subscribe to a plan to continue using the service',
+        message: 'Please subscribe to a plan to continue using this service',
         data: {
           hasActiveSubscription: false,
           subscription: null,
@@ -118,6 +118,9 @@ export async function POST(req: NextRequest) {
     You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
     Confidence Level: ${(confidence * 100).toFixed(1)}%
     When answering questions, use the following spiritual context documents to provide accurate, compassionate, and relevant information:
+
+    **Note**
+    Always avoid using the word Hinduism or Hindu, instead use Vedanta, vedic, or sanatan dharma.
     
     === SPIRITUAL CONTEXT DOCUMENTS ===
     ${contextDocuments}
@@ -129,7 +132,7 @@ export async function POST(req: NextRequest) {
     const result = streamText({
       model: openai(MODEL_NAME),
       messages,
-      onFinish: async ({ text: finalCompletion, usage }) => {
+      onFinish: async ({ text: finalCompletion }) => {
         try {
           await updateMemory({
             userId,

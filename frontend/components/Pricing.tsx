@@ -15,12 +15,13 @@ declare global {
 export default function PricingPage() {
   const { user } = useUserStore();
   const [loading, setLoading] = useState<string>("");
-  const [currentPlan, setCurrentPlan] = useState<string>(null);
+  const [currentPlan, setCurrentPlan] = useState<string>("");
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
-  const [plans, setPlans] = useState([]);
-  const [showExpiredMessage, setShowExpiredMessage] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [plans, setPlans] = useState<any[]>([]);
+  const [showExpiredMessage, setShowExpiredMessage] = useState(false);
   const navigate = useNavigate();
 
   // Load Razorpay script
@@ -66,8 +67,9 @@ export default function PricingPage() {
         }
 
         const data = await response.json();
-        console.log("data", data)
+        console.log("data", data);
         // Merge by index
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const plansWithExtras = data.data.map((item: any, index: number) => ({
           ...item,
           ...(planExtras[index] || {}), // Fallback to empty object if index doesn't exist
@@ -82,33 +84,31 @@ export default function PricingPage() {
     getAllPlans();
   }, []);
 
-
-
   const fetchUserAndSubscription = async () => {
     if (!user?.id) {
-      console.error('No user found');
-      setCurrentPlan(null);
+      console.error("No user found");
+      setCurrentPlan("");
       return;
     }
 
     try {
       const res = await fetch(`/api/subscription/status?userId=${user.id}`);
       const { success, data } = await res.json();
-      console.log("success", success, data)
+      console.log("success", success, data);
       if (success && data) {
         setSubscriptionStatus(data);
         setCurrentPlan(data.subscription?.planType);
         if (data?.totalSubscriptionsCount > 0) {
-          setShowExpiredMessage(true)
+          setShowExpiredMessage(true);
         } else {
-          setShowExpiredMessage(false)
+          setShowExpiredMessage(false);
         }
       } else {
-        setCurrentPlan(null);
+        setCurrentPlan("");
       }
     } catch (error) {
-      console.error('Failed to fetch subscription:', error);
-      setCurrentPlan(null);
+      console.error("Failed to fetch subscription:", error);
+      setCurrentPlan("");
     }
   };
 
@@ -184,7 +184,8 @@ export default function PricingPage() {
             setCurrentPlan(planType);
 
             alert(
-              `🎉 Payment Successful!\n\nYou are now subscribed to the ${orderResponse.data.planName
+              `🎉 Payment Successful!\n\nYou are now subscribed to the ${
+                orderResponse.data.planName
               }.\nYour subscription is active until ${new Date(
                 verifyResponse.data.endDate
               ).toLocaleDateString()}`
@@ -200,9 +201,10 @@ export default function PricingPage() {
           } catch (error) {
             console.error("Payment verification error:", error);
             alert(
-              `Payment Verification Failed\n\n${error instanceof Error
-                ? error.message
-                : "Please contact support with your payment ID"
+              `Payment Verification Failed\n\n${
+                error instanceof Error
+                  ? error.message
+                  : "Please contact support with your payment ID"
               }`
             );
           } finally {
@@ -232,7 +234,8 @@ export default function PricingPage() {
     } catch (error) {
       console.error("Subscribe error:", error);
       alert(
-        `Subscription Failed\n\n${error instanceof Error ? error.message : "Please try again later"
+        `Subscription Failed\n\n${
+          error instanceof Error ? error.message : "Please try again later"
         }`
       );
       setLoading("");
@@ -244,11 +247,15 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         {!subscriptionStatus?.hasActiveSubscription && showExpiredMessage && (
-          <div className=" bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-4 py-1 rounded text-sm font-medium">
-            Your current plan has expired or you've used up all available requests. Please upgrade or renew your plan to continue.          </div>
+          <div className="absolute w-full left-0 top-0 bg-red-100 dark:bg-red-900 dark:text-white text-red-800 px-4 py-2 text-sm font-medium">
+            <span className="flex items-center justify-center">
+              Your subscription has expired, or your request limit has been
+              reached. Please renew or upgrade your plan to continue.
+            </span>
+          </div>
         )}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Choose Your Path
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -264,7 +271,6 @@ export default function PricingPage() {
                 ` • ${subscriptionStatus.subscription.daysRemaining} days remaining`}
             </div>
           )}
-
         </div>
 
         {/* Pricing Cards */}
