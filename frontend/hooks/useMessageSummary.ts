@@ -2,6 +2,7 @@ import { useCompletion } from '@ai-sdk/react';
 import { toast } from 'sonner';
 import { createMessageSummary, updateThread } from '@/frontend/dexie/queries';
 import { useUserStore } from '../stores/UserStore';
+import { apiCall } from '@/utils/api-call';
 
 interface MessageSummaryPayload {
   title: string;
@@ -27,6 +28,7 @@ export const useMessageSummary = () => {
 
           if (isTitle) {
             await updateThread(threadId, title);
+            await apiCall("/api/threads", "PATCH", { threadId, title })
             await createMessageSummary(threadId, messageId, title);
           } else {
             await createMessageSummary(threadId, messageId, title);

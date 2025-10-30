@@ -1,7 +1,13 @@
+import { useUserStore } from "@/frontend/stores/UserStore";
+
 export const apiCall = async (endpoint: string, method: string, body?: object) => {
+    const token = useUserStore.getState().token;
     const res = await fetch(endpoint, {
         method: method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { "Authorization": `Bearer ${token}` })
+        },
         credentials: "include",
         body: JSON.stringify(body),
     });

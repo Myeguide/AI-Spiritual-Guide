@@ -75,7 +75,7 @@ function PureChatInput({
       status === "streaming" ||
       status === "submitted" ||
       !!rateLimitError,
-    [input, status]
+    [input, status, rateLimitError]
   );
 
   const { complete } = useMessageSummary();
@@ -94,6 +94,7 @@ function PureChatInput({
     if (!id) {
       navigate(`/chat/${threadId}`);
       await createThread(threadId);
+      await apiCall("/api/threads", "POST", { threadId });
       complete(currentInput.trim(), {
         body: { threadId, messageId, isTitle: true },
       });
@@ -103,7 +104,7 @@ function PureChatInput({
     await createMessage(threadId, userMessage);
     await apiCall("/api/messages", "POST", {
       threadId,
-      userMessage,
+      message: userMessage,
     });
 
     append(userMessage);
