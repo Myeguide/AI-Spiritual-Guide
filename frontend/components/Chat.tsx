@@ -20,9 +20,6 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-  const subscription = useUserStore((state) => state.subscription);
-  const fetchSubscription = useUserStore((state) => state.fetchSubscription);
-  const setSubscription = useUserStore((state) => state.setSubscription);
   console.log("userConfig", userConfig)
   const [rateLimitError, setRateLimitError] = useState<{
     message: string;
@@ -37,14 +34,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     registerRef,
     scrollToMessage,
   } = useChatNavigator();
-
-  // Fetch subscription on component mount
-  useEffect(() => {
-    if (userConfig) {
-      fetchSubscription();
-    }
-  }, [userConfig, fetchSubscription]);
-
 
   const {
     messages,
@@ -98,9 +87,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         const successData = await response.clone().json();
         console.log("succesdata", successData)
 
-        if (successData?.subscription) {
-          setSubscription(successData.subscription);
-        }
       }
 
       // Handle different error types
