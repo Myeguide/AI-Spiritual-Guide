@@ -21,5 +21,5 @@
 - [ ] Retry button option in ui if server error
 - [ ] Handle the case if possible, if token runout.
 - [ ] Partion of children under (21 age) propmt
-- [ ] Store message in prisma
-- [ ] Store thread in prisma
+- [x] Store message in prisma
+- [x] Store thread in prisma

@@ -26,16 +26,16 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const { id, title } = await req.json();
+        const { threadId } = await req.json();
         const thread = await prisma.thread.create({
             data: {
-                id,
+                id: threadId,
                 userId,
-                title,
+                title: "",
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 lastMessageAt: new Date(),
-                conversationSummary: "New Chat",
+                conversationSummary: "",
             },
         });
         return NextResponse.json({
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
  * Get all threads for the authenticated user
  */
 export async function GET(req: NextRequest) {
+    console.log("Thread api with GET request is called");
     try {
         const authHeader = req.headers.get("authorization");
         const token = authHeader?.split(" ")[1] as string;
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
         }
 
         const userId = verifyToken(token);
+        console.log("userId :", userId);
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized - Invalid token' },
@@ -91,6 +93,7 @@ export async function GET(req: NextRequest) {
                     title: true,
                     createdAt: true,
                     updatedAt: true,
+                    lastMessageAt: true,
                     _count: {
                         select: {
                             messages: true,
@@ -110,7 +113,7 @@ export async function GET(req: NextRequest) {
                 },
             }),
         ]);
-
+        console.log("All Threads :", threads);
         return NextResponse.json({
             success: true,
             threads,

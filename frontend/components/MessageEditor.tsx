@@ -81,7 +81,7 @@ export default function MessageEditor({
       await createMessage(threadId, updatedMessage);
       await apiCall("/api/messages", "POST", {
         threadId,
-        updatedMessage,
+        message: updatedMessage,
       });
 
       setMessages((messages) => {

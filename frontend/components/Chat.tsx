@@ -61,7 +61,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         await createMessage(threadId, aiMessage);
         await apiCall("/api/messages", "POST", {
           threadId,
-          aiMessage,
+          message: aiMessage,
         });
       } catch (error) {
         console.error(error);
