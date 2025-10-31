@@ -86,7 +86,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         console.log("succes response", response)
         const successData = await response.clone().json();
         console.log("succesdata", successData)
-
       }
 
       // Handle different error types
