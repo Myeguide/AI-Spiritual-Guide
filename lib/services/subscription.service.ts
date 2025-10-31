@@ -170,6 +170,23 @@ export class SubscriptionService {
         return false;
     }
 
+    static async markAsExpired(subscriptionId: string, reason: 'date' | 'requests') {
+        try {
+            return await prisma.subscription.update({
+                where: { id: subscriptionId },
+                data: {
+                    status: SubscriptionStatus.EXPIRED,
+                    expiresAt: new Date(),
+                    // Optional: track why it expired
+                    // expiredReason: reason
+                }
+            });
+        } catch (error) {
+            console.error('Mark subscription as expired error:', error);
+            throw new DatabaseError('Failed to mark subscription as expired', error);
+        }
+    }
+
     static isSubscriptionExpiredByDate(subscription: { expiresAt: Date | null }): boolean {
         // null expiresAt means lifetime/no expiry
         if (!subscription.expiresAt) {
@@ -219,17 +236,6 @@ export class SubscriptionService {
                     requestsUsed: { increment: 1 }
                 }
             });
-
-            // Check if requests are now exhausted
-            if (subscription.requestsUsed >= subscription.totalRequests) {
-                await prisma.subscription.update({
-                    where: { id: subscriptionId },
-                    data: {
-                        status: SubscriptionStatus.EXPIRED,
-                        expiresAt: new Date()
-                    }
-                });
-            }
 
             return subscription;
         } catch (error) {

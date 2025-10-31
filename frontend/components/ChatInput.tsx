@@ -60,6 +60,7 @@ function PureChatInput({
 }: ChatInputProps) {
   // const canChat = useAPIKeyStore((state) => state.hasRequiredKeys());
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
+  const subscription = useUserStore((state) => state.subscription);
 
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 72,
@@ -74,6 +75,7 @@ function PureChatInput({
       !input.trim() ||
       status === "streaming" ||
       status === "submitted" ||
+      subscription.hasActiveSubscription ||
       !!rateLimitError,
     [input, status, rateLimitError]
   );

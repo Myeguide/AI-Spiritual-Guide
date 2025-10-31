@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiCall } from "@/utils/api-call";
 
 interface ChatProps {
@@ -20,11 +20,13 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
+  console.log("userConfig", userConfig)
   const [rateLimitError, setRateLimitError] = useState<{
     message: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     details?: any;
   } | null>(null);
+
   const {
     isNavigatorVisible,
     handleToggleNavigator,
@@ -80,6 +82,10 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
             message: "Failed to parse server response",
           };
         }
+      } else {
+        console.log("succes response", response)
+        const successData = await response.clone().json();
+        console.log("succesdata", successData)
       }
 
       // Handle different error types
@@ -111,6 +117,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         });
       } else {
         // Clear error on success
+        console.log("inside else")
         setRateLimitError(null);
       }
     },

@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
                     hasActiveSubscription: false,
                     subscription: null,
                     message: 'No subscription found for this user',
-                    totalSubscriptionsCount
+                    totalSubscriptionsCount,
+                    expiresAt: null,
                 },
             });
         }
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
                 subscription: subscription,
                 statusMessage: statusMessage || 'Active',
                 isExpired,
+                expiresAt: subscription?.expiresAt || null,
                 totalSubscriptionsCount
             },
         });
