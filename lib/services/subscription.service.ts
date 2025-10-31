@@ -187,7 +187,6 @@ export class SubscriptionService {
         }
     }
 
-
     static isSubscriptionExpiredByDate(subscription: { expiresAt: Date | null }): boolean {
         // null expiresAt means lifetime/no expiry
         if (!subscription.expiresAt) {
@@ -237,17 +236,6 @@ export class SubscriptionService {
                     requestsUsed: { increment: 1 }
                 }
             });
-
-            // Check if requests are now exhausted
-            if (subscription.requestsUsed >= subscription.totalRequests) {
-                await prisma.subscription.update({
-                    where: { id: subscriptionId },
-                    data: {
-                        status: SubscriptionStatus.EXPIRED,
-                        expiresAt: new Date()
-                    }
-                });
-            }
 
             return subscription;
         } catch (error) {
