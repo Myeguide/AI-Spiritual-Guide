@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const MODEL_NAME = 'gpt-4o';
 
 export async function POST(req: NextRequest) {
-  //process.env.OPENAI_API_KEY = "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"
+  process.env.OPENAI_API_KEY = "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"
 
   try {
     const { messages } = await req.json();
@@ -137,6 +137,7 @@ export async function POST(req: NextRequest) {
       model: openai(MODEL_NAME),
       messages,
       onFinish: async ({ text: finalCompletion }) => {
+        console.log('on finish')
         try {
           await updateMemory({
             userId,

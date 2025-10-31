@@ -82,10 +82,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
             message: "Failed to parse server response",
           };
         }
-      } else {
-        console.log("succes response", response)
-        const successData = await response.clone().json();
-        console.log("succesdata", successData)
       }
 
       // Handle different error types
@@ -121,9 +117,9 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         setRateLimitError(null);
       }
     },
-    onError: () => {
+    onError: (e) => {
       // Handle network or other errors
-      console.error("Chat error:", rateLimitError?.details);
+      console.error("Chat error:", e, rateLimitError?.details);
     },
     headers: {
       Authorization: `Bearer ${userConfig}`,
