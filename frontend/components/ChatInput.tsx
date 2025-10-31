@@ -87,7 +87,8 @@ function PureChatInput({
     if (
       !currentInput.trim() ||
       status === "streaming" ||
-      status === "submitted"
+      status === "submitted" ||
+      subscription.hasActiveSubscription || !!rateLimitError
     )
       return;
 
