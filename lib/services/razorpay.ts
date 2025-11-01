@@ -32,6 +32,7 @@ export async function createRazorpayOrder(
     amount: string,
     currency: string,
     receipt: string,
+
     notes?: Record<string, any>
 ): Promise<RazorpayOrder> {
     try {
@@ -47,7 +48,9 @@ export async function createRazorpayOrder(
 
         const order = await razorpay.orders.create(orderOptions);
         return order as RazorpayOrder;
-    } catch (error: any) {
+    }
+
+    catch (error: any) {
         console.error('Razorpay order creation failed:', error);
         throw new PaymentError(
             error.error?.description || 'Failed to create payment order',
@@ -65,7 +68,9 @@ export async function fetchRazorpayOrder(orderId: string): Promise<RazorpayOrder
         const razorpay = getRazorpayInstance();
         const order = await razorpay.orders.fetch(orderId);
         return order as RazorpayOrder;
-    } catch (error: any) {
+    }
+
+    catch (error: any) {
         console.error('Failed to fetch order:', error);
         throw new PaymentError(
             'Failed to fetch order details',
@@ -116,7 +121,9 @@ export async function fetchRazorpayPayment(
         const razorpay = getRazorpayInstance();
         const payment = await razorpay.payments.fetch(paymentId);
         return payment as RazorpayPayment;
-    } catch (error: any) {
+    }
+
+    catch (error: any) {
         console.error('Failed to fetch payment:', error);
         throw new PaymentError(
             'Failed to fetch payment details',
@@ -138,7 +145,9 @@ export async function capturePayment(
         const razorpay = getRazorpayInstance();
         const payment = await razorpay.payments.capture(paymentId, amount, currency);
         return payment as RazorpayPayment;
-    } catch (error: any) {
+    }
+
+    catch (error: any) {
         console.error('Payment capture failed:', error);
         throw new PaymentError(
             error.error?.description || 'Failed to capture payment',
@@ -154,7 +163,9 @@ export async function capturePayment(
 export async function refundPayment(
     paymentId: string,
     amount?: number,
+
     notes?: Record<string, any>
+
 ): Promise<any> {
     try {
         const razorpay = getRazorpayInstance();
@@ -169,6 +180,7 @@ export async function refundPayment(
 
         const refund = await razorpay.payments.refund(paymentId, refundOptions);
         return refund;
+
     } catch (error: any) {
         console.error('Refund failed:', error);
         throw new PaymentError(
@@ -212,6 +224,7 @@ export function formatAmount(amountInPaise: number): string {
 /**
  * Parse Razorpay error for user-friendly messages
  */
+
 export function parseRazorpayError(error: any): string {
     if (error.error?.description) {
         return error.error.description;

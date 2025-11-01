@@ -18,7 +18,7 @@ export const syncDataFromServer = async () => {
 
         // Step 3: Upload any local-only threads to server (edge case: offline created threads)
         for (const localThread of localThreads) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             const serverHasThread = serverThreads.some((t: any) => t.id === localThread.id);
 
             if (!serverHasThread) {
@@ -49,7 +49,7 @@ export const syncDataFromServer = async () => {
         });
 
         // Step 5: Delete local threads that don't exist on server (cleanup)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const serverThreadIds = new Set(serverThreads.map((t: any) => t.id));
         for (const localThread of localThreads) {
             if (!serverThreadIds.has(localThread.id)) {
@@ -120,7 +120,7 @@ const syncMessagesForThread = async (
             .toArray();
 
         const localMessagesMap = new Map(localMessages.map((m) => [m.id, m]));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const serverMessagesMap = new Map(serverMessages.map((m: any) => [m.id, m]));
 
         // Step 3: Upload local-only messages to server (edge case: offline messages)
@@ -145,7 +145,7 @@ const syncMessagesForThread = async (
 
         // Step 4: Download messages from server that aren't in IndexedDB
         const messagesToDownload = serverMessages.filter(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             (msg: any) => !localMessagesMap.has(msg.id)
         );
 
@@ -165,7 +165,7 @@ const syncMessagesForThread = async (
         }
 
         // Step 5: Delete local messages that don't exist on server (cleanup)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const serverMessageIds = new Set(serverMessages.map((m: any) => m.id));
         for (const localMsg of localMessages) {
             if (!serverMessageIds.has(localMsg.id)) {

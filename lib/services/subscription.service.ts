@@ -170,7 +170,7 @@ export class SubscriptionService {
         return false;
     }
 
-    static async markAsExpired(subscriptionId: string, reason: 'date' | 'requests') {
+    static async markAsExpired(subscriptionId: string) {
         try {
             return await prisma.subscription.update({
                 where: { id: subscriptionId },

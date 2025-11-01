@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiCall } from "@/utils/api-call";
 
 interface ChatProps {
@@ -20,10 +20,10 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-  console.log("userConfig", userConfig)
+  console.log("userConfig", userConfig);
   const [rateLimitError, setRateLimitError] = useState<{
     message: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     details?: any;
   } | null>(null);
 
@@ -113,7 +113,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         });
       } else {
         // Clear error on success
-        console.log("inside else")
+        console.log("inside else");
         setRateLimitError(null);
       }
     },
