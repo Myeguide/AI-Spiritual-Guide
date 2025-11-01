@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
             message: savedMessage,
         }, { status: 201 })
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any  
+
     catch (error: any) {
         console.log(error);
 

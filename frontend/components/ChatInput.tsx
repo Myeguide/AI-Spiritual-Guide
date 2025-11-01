@@ -22,7 +22,7 @@ interface ChatInputProps {
   threadId: string;
   rateLimitError: {
     message: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     details?: any;
   } | null;
   input: UseChatHelpers["input"];
@@ -88,7 +88,8 @@ function PureChatInput({
       !currentInput.trim() ||
       status === "streaming" ||
       status === "submitted" ||
-      subscription.hasActiveSubscription || !!rateLimitError
+      subscription.hasActiveSubscription ||
+      !!rateLimitError
     )
       return;
 

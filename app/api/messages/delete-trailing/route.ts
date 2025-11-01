@@ -104,7 +104,7 @@ export async function DELETE(req: NextRequest) {
             deletedMessages: result.deletedMessages,
         });
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any  
+
     catch (error: any) {
         console.error("❌ Error deleting trailing messages:", error);
 

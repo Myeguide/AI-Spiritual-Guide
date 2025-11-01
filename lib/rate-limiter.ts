@@ -1,6 +1,6 @@
 
 import { prisma } from '@/lib/prisma'; // Adjust path to your prisma client
-import { SubscriptionStatus } from '@/lib/generated/prisma';
+// import { SubscriptionStatus } from '@/lib/generated/prisma';
 // Types
 export interface RateLimitCheckResult {
   allowed: boolean;
@@ -96,12 +96,12 @@ export async function seedSubscriptionTiers(): Promise<void> {
 
 
 
-class DatabaseError extends Error {
-  constructor(message: string, public originalError?: any) {
-    super(message);
-    this.name = 'DatabaseError';
-  }
-}
+// class DatabaseError extends Error {
+//   constructor(message: string, public originalError?: any) {
+//     super(message);
+//     this.name = 'DatabaseError';
+//   }
+// }
 
 
 

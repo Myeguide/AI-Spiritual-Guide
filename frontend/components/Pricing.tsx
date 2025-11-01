@@ -7,7 +7,6 @@ import { apiCall } from "@/utils/api-call";
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -19,7 +18,7 @@ export default function PricingPage() {
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<SubscriptionStatus | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const [plans, setPlans] = useState<any[]>([]);
   const [showExpiredMessage, setShowExpiredMessage] = useState(false);
   const navigate = useNavigate();
@@ -69,7 +68,7 @@ export default function PricingPage() {
         const data = await response.json();
         console.log("data", data);
         // Merge by index
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const plansWithExtras = data.data.map((item: any, index: number) => ({
           ...item,
           ...(planExtras[index] || {}), // Fallback to empty object if index doesn't exist

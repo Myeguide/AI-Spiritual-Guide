@@ -4,7 +4,7 @@ import { verifyToken } from "@/lib/generate-token";
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const authHeader = req.headers.get("authorization");
@@ -24,10 +24,13 @@ export async function PUT(
                 { status: 401 }
             );
         }
+
+        // Await params before accessing id
+        const { id } = await context.params;
         const { title } = await req.json();
 
         const thread = await prisma.thread.update({
-            where: { id: params.id, userId },
+            where: { id, userId },
             data: { title, updatedAt: new Date() },
         });
 
@@ -43,7 +46,7 @@ export async function PUT(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const authHeader = req.headers.get("authorization");
@@ -63,8 +66,12 @@ export async function DELETE(
                 { status: 401 }
             );
         }
+
+        // Await params before accessing id
+        const { id } = await context.params;
+
         await prisma.thread.delete({
-            where: { id: params.id, userId },
+            where: { id, userId },
         });
 
         return NextResponse.json({ success: true });

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const isExpired = SubscriptionService.isSubscriptionExpiredByDate(activeSubscription);
 
     if (isExpired) {
-      await SubscriptionService.markAsExpired(activeSubscription.id, 'date');
+      await SubscriptionService.markAsExpired(activeSubscription.id);
 
       return NextResponse.json({
         success: false,
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     const requestsRemaining = activeSubscription.totalRequests - activeSubscription.requestsUsed;
 
     if (requestsRemaining <= 0) {
-      await SubscriptionService.markAsExpired(activeSubscription.id, 'date');
+      await SubscriptionService.markAsExpired(activeSubscription.id);
 
       return NextResponse.json({
         success: false,

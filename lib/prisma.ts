@@ -1,5 +1,4 @@
-import { PrismaClient, SubscriptionStatus, PaymentStatus } from '@/lib/generated/prisma';
-import { DatabaseError, PlanType } from '@/types/payment';
+import { PrismaClient} from '@/lib/generated/prisma';
 
 // PrismaClient is attached to the `global` object in development to prevent
 // exhausting your database connection limit.
