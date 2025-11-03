@@ -7,7 +7,7 @@ import { createMessage } from "@/frontend/dexie/queries";
 import ThemeToggler from "./ui/ThemeToggler";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { MessageSquareMore } from "lucide-react";
+import { Menu, MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { useState } from "react";
@@ -20,10 +20,8 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-  console.log("userConfig", userConfig);
   const [rateLimitError, setRateLimitError] = useState<{
     message: string;
-
     details?: any;
   } | null>(null);
 
@@ -32,7 +30,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     handleToggleNavigator,
     closeNavigator,
     registerRef,
-    scrollToMessage,
   } = useChatNavigator();
 
   const {
@@ -155,21 +152,20 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       <ThemeToggler />
       <Button
         onClick={handleToggleNavigator}
-        variant="outline"
+        variant="ghost"
         size="icon"
-        className="fixed right-16 top-4 z-20"
+        className="fixed right-10 top-1 z-20 sm:hidden"
         aria-label={
           isNavigatorVisible
             ? "Hide message navigator"
             : "Show message navigator"
         }
       >
-        <MessageSquareMore className="h-5 w-5" />
+        <Menu className="h-5 w-5"/>
       </Button>
 
       <ChatNavigator
         threadId={threadId}
-        scrollToMessage={scrollToMessage}
         isVisible={isNavigatorVisible}
         onClose={closeNavigator}
       />

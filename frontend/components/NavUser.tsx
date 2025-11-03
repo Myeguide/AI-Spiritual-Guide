@@ -27,12 +27,29 @@ import {
 import { CircleUserRound } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useUserStore } from "@/frontend/stores/UserStore";
+import { apiCall } from "@/utils/api-call";
+import { toast } from "sonner";
 
 export function NavUser() {
-  const { user, logout } = useUserStore();
+  const { user } = useUserStore();
   const { firstName, lastName, phoneNumber } = user || {};
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+
+  // In your logout handler (wherever you have it)
+  const handleLogout = async () => {
+    try {
+      // Call logout API
+      await apiCall("/api/logout", "POST");
+      useUserStore.getState().logout();
+      navigate("/chat");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      useUserStore.getState().logout();
+      navigate("/chat");
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -96,7 +113,7 @@ export function NavUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()}>
+            <DropdownMenuItem onClick={handleLogout}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

@@ -1,33 +1,46 @@
 import { db } from "@/frontend/dexie/db";
+import { clearAllUserData } from "@/frontend/dexie/queries";
 import { apiCall } from "@/utils/api-call";
 
+/**
+ * Main sync function - syncs all user data from server to IndexedDB
+ * Uses bulk API for optimal performance
+ */
 export const syncDataFromServer = async () => {
     try {
-        // Step 1: Fetch all threads from server
+
+        // Step 1: Fetch all threads for current user
         const threadsResponse = await apiCall(`/api/threads`, "GET");
 
+        // Handle new users or errors gracefully
         if (!threadsResponse.success) {
-            console.error("Failed to fetch threads:", threadsResponse.statusText);
-            return;
+            if (threadsResponse.status === 404 || !threadsResponse.threads) {
+                await clearAllUserData();
+                return;
+            }
+            throw new Error(threadsResponse.error || "Failed to fetch threads");
         }
         const serverThreads = threadsResponse.threads || [];
 
-        // Step 2: Get all local threads
+        // Early return if no data on server
+        if (serverThreads.length === 0) {
+            await clearAllUserData();
+            return;
+        }
+
+        // Step 2: Upload local-only threads to server (offline-created threads)
         const localThreads = await db.threads.toArray();
-        new Map(localThreads.map((t) => [t.id, t]));
+        const serverThreadIds = new Set(serverThreads.map((t: any) => t.id));
 
-        // Step 3: Upload any local-only threads to server (edge case: offline created threads)
         for (const localThread of localThreads) {
-
-            const serverHasThread = serverThreads.some((t: any) => t.id === localThread.id);
-
-            if (!serverHasThread) {
+            if (!serverThreadIds.has(localThread.id)) {
                 try {
                     await apiCall("/api/threads", "POST", {
                         threadId: localThread.id,
                         title: localThread.title,
-                    })
-                    // Upload messages for this local-only thread
+                    });
+
+                    // Upload messages for this thread
                     await uploadLocalMessagesForThread(localThread.id);
                 } catch (error) {
                     console.error(`Failed to upload thread ${localThread.id}:`, error);
@@ -35,8 +48,10 @@ export const syncDataFromServer = async () => {
             }
         }
 
-        // Step 4: Download ALL threads from server to IndexedDB
+        // Step 3: Sync threads to IndexedDB (replace all)
         await db.transaction("rw", [db.threads], async () => {
+            await db.threads.clear();
+
             for (const serverThread of serverThreads) {
                 await db.threads.put({
                     id: serverThread.id,
@@ -48,110 +63,42 @@ export const syncDataFromServer = async () => {
             }
         });
 
-        // Step 5: Delete local threads that don't exist on server (cleanup)
-
-        const serverThreadIds = new Set(serverThreads.map((t: any) => t.id));
-        for (const localThread of localThreads) {
-            if (!serverThreadIds.has(localThread.id)) {
-                await db.threads.delete(localThread.id);
-                // Also delete associated messages
-                await db.messages.where("threadId").equals(localThread.id).delete();
-            }
-        }
-
-        // Step 6: Sync messages for ALL threads
-        for (const serverThread of serverThreads) {
-            await syncMessagesForThread(serverThread.id);
-        }
-    } catch (error) {
-        console.error("❌ Error during data sync:", error);
-    }
-};// Upload local-only messages for a thread
-const uploadLocalMessagesForThread = async (
-    threadId: string,
-) => {
-    try {
-        const localMessages = await db.messages
-            .where("threadId")
-            .equals(threadId)
-            .toArray();
-
-        for (const localMsg of localMessages) {
-            try {
-                await apiCall("/api/messages", "POST", {
-                    threadId,
-                    message: {
-                        id: localMsg.id,
-                        content: localMsg.content,
-                        parts: localMsg.parts,
-                        role: localMsg.role,
-                        createdAt: localMsg.createdAt,
-                    },
-                })
-            } catch (error) {
-                console.error(`Failed to upload message ${localMsg.id}:`, error);
-            }
-        }
-    } catch (error) {
-        console.error(`Error uploading messages for thread ${threadId}:`, error);
-    }
-};
-
-
-// Sync messages for a thread (server is source of truth)
-const syncMessagesForThread = async (
-    threadId: string
-) => {
-    try {
-        // Step 1: Fetch ALL messages from server for this thread
-        const messagesResponse = await apiCall(`/api/messages?threadId=${threadId}`, "GET");
+        // Step 4: Fetch ALL messages for ALL threads in ONE request (bulk)
+        const messagesResponse = await apiCall(`/api/messages/bulk`, "GET");
 
         if (!messagesResponse.success) {
-            console.error("Failed to fetch messages:", messagesResponse.statusText);
+            console.error("Failed to fetch bulk messages");
+            // Don't throw - threads are synced, messages can be loaded later
             return;
         }
 
-        const serverMessages = messagesResponse.messages || [];
+        const messagesByThread = messagesResponse.messagesByThread || {};
+        const totalMessages = messagesResponse.totalMessages || 0;
 
-        // Step 2: Get local messages for this thread
-        const localMessages = await db.messages
-            .where("threadId")
-            .equals(threadId)
-            .toArray();
+        // Step 5: Upload local-only messages to server
+        const localMessages = await db.messages.toArray();
+        const serverMessageIds = new Set();
 
-        const localMessagesMap = new Map(localMessages.map((m) => [m.id, m]));
-
-        const serverMessagesMap = new Map(serverMessages.map((m: any) => [m.id, m]));
-
-        // Step 3: Upload local-only messages to server (edge case: offline messages)
-        for (const localMsg of localMessages) {
-            if (!serverMessagesMap.has(localMsg.id)) {
-                try {
-                    await apiCall("/api/messages", "POST", {
-                        threadId,
-                        message: {
-                            id: localMsg.id,
-                            content: localMsg.content,
-                            parts: localMsg.parts,
-                            role: localMsg.role,
-                            createdAt: localMsg.createdAt,
-                        },
-                    })
-                } catch (error) {
-                    console.error(`Failed to upload message ${localMsg.id}:`, error);
-                }
-            }
+        for (const threadId in messagesByThread) {
+            messagesByThread[threadId].forEach((msg: any) => {
+                serverMessageIds.add(msg.id);
+            });
         }
 
-        // Step 4: Download messages from server that aren't in IndexedDB
-        const messagesToDownload = serverMessages.filter(
+        const localOnlyMessages = localMessages.filter(msg => !serverMessageIds.has(msg.id));
 
-            (msg: any) => !localMessagesMap.has(msg.id)
-        );
+        if (localOnlyMessages.length > 0) {
+            await uploadLocalMessages(localOnlyMessages);
+        }
 
-        if (messagesToDownload.length > 0) {
-            await db.transaction("rw", [db.messages], async () => {
-                for (const msg of messagesToDownload) {
+        // Step 6: Sync all messages to IndexedDB (replace all)
+        await db.transaction("rw", [db.messages], async () => {
+            await db.messages.clear();
+
+            // Insert all messages
+            for (const threadId in messagesByThread) {
+                const messages = messagesByThread[threadId];
+                for (const msg of messages) {
                     await db.messages.put({
                         id: msg.id,
                         threadId: msg.threadId,
@@ -161,18 +108,154 @@ const syncMessagesForThread = async (
                         createdAt: new Date(msg.createdAt),
                     });
                 }
-            });
+            }
+        });
+    } catch (error) {
+        console.error("❌ Error during data sync:", error);
+        // On critical error, clear potentially stale data
+        await clearAllUserData().catch(console.error);
+        throw error; // Re-throw to handle in caller
+    }
+};
+
+/**
+ * Upload local-only messages in bulk for a specific thread
+ */
+const uploadLocalMessagesForThread = async (threadId: string) => {
+    try {
+        const localMessages = await db.messages
+            .where("threadId")
+            .equals(threadId)
+            .toArray();
+
+        if (localMessages.length === 0) {
+            return;
         }
 
-        // Step 5: Delete local messages that don't exist on server (cleanup)
+        // Upload in batches to avoid overwhelming the server
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < localMessages.length; i += BATCH_SIZE) {
+            const batch = localMessages.slice(i, i + BATCH_SIZE);
 
-        const serverMessageIds = new Set(serverMessages.map((m: any) => m.id));
-        for (const localMsg of localMessages) {
-            if (!serverMessageIds.has(localMsg.id)) {
-                await db.messages.delete(localMsg.id);
+            await Promise.all(
+                batch.map(async (localMsg) => {
+                    try {
+                        await apiCall("/api/messages", "POST", {
+                            threadId,
+                            message: {
+                                id: localMsg.id,
+                                content: localMsg.content,
+                                parts: localMsg.parts,
+                                role: localMsg.role,
+                                createdAt: localMsg.createdAt,
+                            },
+                        });
+                    } catch (error) {
+                        console.error(`Failed to upload message ${localMsg.id}:`, error);
+                    }
+                })
+            );
+        }
+    } catch (error) {
+        console.error(`Error uploading messages for thread ${threadId}:`, error);
+    }
+};
+
+/**
+ * Upload local-only messages in bulk (all threads)
+ */
+const uploadLocalMessages = async (messages: any[]) => {
+    try {
+        // Group messages by thread for better organization
+        const messagesByThread = messages.reduce((acc: any, msg) => {
+            if (!acc[msg.threadId]) {
+                acc[msg.threadId] = [];
+            }
+            acc[msg.threadId].push(msg);
+            return acc;
+        }, {});
+
+        // Upload messages for each thread
+        for (const threadId in messagesByThread) {
+            const threadMessages = messagesByThread[threadId];
+
+            // Upload in batches
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < threadMessages.length; i += BATCH_SIZE) {
+                const batch = threadMessages.slice(i, i + BATCH_SIZE);
+
+                await Promise.all(
+                    batch.map(async (msg: any) => {
+                        try {
+                            await apiCall("/api/messages", "POST", {
+                                threadId,
+                                message: {
+                                    id: msg.id,
+                                    content: msg.content,
+                                    parts: msg.parts,
+                                    role: msg.role,
+                                    createdAt: msg.createdAt,
+                                },
+                            });
+                        } catch (error) {
+                            console.error(`Failed to upload message ${msg.id}:`, error);
+                        }
+                    })
+                );
             }
         }
     } catch (error) {
+        console.error("Error uploading local messages:", error);
+    }
+};
+
+/**
+ * Sync messages for a specific thread (on-demand loading)
+ * Use this when opening a thread that hasn't been synced yet
+ */
+export const syncThreadMessagesOnDemand = async (threadId: string) => {
+    try {
+        // Check if messages already exist locally
+        const localMessageCount = await db.messages
+            .where("threadId")
+            .equals(threadId)
+            .count();
+
+        if (localMessageCount > 0) {
+            return;
+        }
+
+        // Fetch messages from server
+        const messagesResponse = await apiCall(
+            `/api/messages?threadId=${threadId}`,
+            "GET"
+        );
+
+        if (!messagesResponse.success) {
+            console.error(`Failed to fetch messages for thread ${threadId}`);
+            throw new Error("Failed to fetch messages");
+        }
+
+        const serverMessages = messagesResponse.messages || [];
+        if (serverMessages.length === 0) {
+            return;
+        }
+
+        // Save to IndexedDB
+        await db.transaction("rw", [db.messages], async () => {
+            for (const msg of serverMessages) {
+                await db.messages.put({
+                    id: msg.id,
+                    threadId: msg.threadId,
+                    parts: msg.parts,
+                    role: msg.role,
+                    content: msg.content,
+                    createdAt: new Date(msg.createdAt),
+                });
+            }
+        });
+    } catch (error) {
         console.error(`❌ Error syncing messages for thread ${threadId}:`, error);
+        throw error;
     }
 };

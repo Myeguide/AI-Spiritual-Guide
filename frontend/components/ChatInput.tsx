@@ -1,5 +1,5 @@
 import { ArrowUpIcon } from "lucide-react";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Textarea } from "@/frontend/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Button } from "@/frontend/components/ui/button";
@@ -12,7 +12,7 @@ import AuthForm from "@/frontend/components/AuthForm";
 import { UIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { StopIcon } from "./ui/icons";
-// import { toast } from "sonner";
+import { toast } from "sonner";
 import { useMessageSummary } from "@/frontend/hooks/useMessageSummary";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { TokenLimitExceeded } from "./RateWarning";
@@ -22,7 +22,6 @@ interface ChatInputProps {
   threadId: string;
   rateLimitError: {
     message: string;
-
     details?: any;
   } | null;
   input: UseChatHelpers["input"];
@@ -39,6 +38,7 @@ interface StopButtonProps {
 interface SendButtonProps {
   onSubmit: () => void;
   disabled: boolean;
+  isLoading: boolean;
 }
 
 const createUserMessage = (id: string, text: string): UIMessage => ({
@@ -58,62 +58,91 @@ function PureChatInput({
   stop,
   rateLimitError,
 }: ChatInputProps) {
-  // const canChat = useAPIKeyStore((state) => state.hasRequiredKeys());
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
   const subscription = useUserStore((state) => state.subscription);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 72,
     maxHeight: 200,
   });
-
   const navigate = useNavigate();
   const { id } = useParams();
-
   const isDisabled = useMemo(
     () =>
       !input.trim() ||
       status === "streaming" ||
       status === "submitted" ||
+      isSubmitting ||
       subscription.hasActiveSubscription ||
       !!rateLimitError,
-    [input, status, rateLimitError]
+    [input, status, isSubmitting, rateLimitError]
   );
-
   const { complete } = useMessageSummary();
-
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
-    if (
-      !currentInput.trim() ||
-      status === "streaming" ||
-      status === "submitted" ||
-      subscription.hasActiveSubscription ||
-      !!rateLimitError
-    )
+    if (!currentInput.trim()) {
+      toast.error("Please enter a message");
       return;
-
-    const messageId = uuidv4();
-
-    if (!id) {
-      navigate(`/chat/${threadId}`);
-      await createThread(threadId);
-      await apiCall("/api/threads", "POST", { threadId });
-      complete(currentInput.trim(), {
-        body: { threadId, messageId, isTitle: true },
-      });
     }
-
-    const userMessage = createUserMessage(messageId, currentInput.trim());
-    await createMessage(threadId, userMessage);
-    await apiCall("/api/messages", "POST", {
-      threadId,
-      message: userMessage,
-    });
-
-    append(userMessage);
-    setInput("");
-    adjustHeight(true);
+    if (status === "streaming" || status === "submitted") {
+      return;
+    }
+    if (rateLimitError) {
+      toast.error(rateLimitError.message);
+      return;
+    }
+    if (isSubmitting) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const messageId = uuidv4();
+      const userMessage = createUserMessage(messageId, currentInput.trim());
+      if (!id) {
+        try {
+          navigate(`/chat/${threadId}`);
+          await createThread(threadId);
+          const threadResponse = await apiCall("/api/threads", "POST", {
+            threadId,
+          });
+          if (!threadResponse.success) {
+            throw new Error("Failed to create thread on server");
+          }
+          complete(currentInput.trim(), {
+            body: { threadId, messageId, isTitle: true },
+          });
+        } catch (error) {
+          console.error("Error creating thread:", error);
+          toast.error("Failed to create new chat. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      try {
+        await createMessage(threadId, userMessage);
+      } catch (error) {
+        console.error("Error saving message locally:", error);
+        toast.error("Failed to save message locally");
+        setIsSubmitting(false);
+        return;
+      }
+      apiCall("/api/messages", "POST", {
+        threadId,
+        message: userMessage,
+      }).catch((error) => {
+        console.error("Error saving message to server:", error);
+        toast.error("Message sent but failed to sync with server");
+      });
+      append(userMessage);
+      setInput("");
+      adjustHeight(true);
+      textareaRef.current?.focus();
+    } catch (error) {
+      console.error("Error submitting message:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }, [
     input,
     status,
@@ -125,8 +154,8 @@ function PureChatInput({
     threadId,
     complete,
     navigate,
+    isSubmitting,
   ]);
-
   if (!isAuthenticated) {
     return (
       <div className="fixed inset-0 z-90 bg-background bg-opacity-90 flex items-center justify-center">
@@ -134,19 +163,18 @@ function PureChatInput({
       </div>
     );
   }
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isDisabled) {
+        handleSubmit();
+      }
     }
   };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     adjustHeight();
   };
-
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
       {rateLimitError && (
@@ -162,7 +190,11 @@ function PureChatInput({
               <Textarea
                 id="chat-input"
                 value={input}
-                placeholder="What can I do for you?"
+                placeholder={
+                  !subscription.hasActiveSubscription
+                    ? "Please subscribe to send messages"
+                    : "What can I do for you?"
+                }
                 className={cn(
                   "w-full px-4 py-3 border-none shadow-none dark:bg-transparent",
                   "placeholder:text-muted-foreground resize-none",
@@ -188,7 +220,11 @@ function PureChatInput({
                 {status === "submitted" || status === "streaming" ? (
                   <StopButton stop={stop} />
                 ) : (
-                  <SendButton onSubmit={handleSubmit} disabled={isDisabled} />
+                  <SendButton
+                    onSubmit={handleSubmit}
+                    disabled={isDisabled}
+                    isLoading={isSubmitting}
+                  />
                 )}
               </div>
             </div>
@@ -202,6 +238,7 @@ function PureChatInput({
 const ChatInput = memo(PureChatInput, (prevProps, nextProps) => {
   if (prevProps.input !== nextProps.input) return false;
   if (prevProps.status !== nextProps.status) return false;
+  if (prevProps.rateLimitError !== nextProps.rateLimitError) return false;
   return true;
 });
 
@@ -212,6 +249,7 @@ function PureStopButton({ stop }: StopButtonProps) {
       size="icon"
       onClick={stop}
       aria-label="Stop generating response"
+      className="bg-[#B500FF]!"
     >
       <StopIcon size={20} />
     </Button>
@@ -220,7 +258,7 @@ function PureStopButton({ stop }: StopButtonProps) {
 
 const StopButton = memo(PureStopButton);
 
-const PureSendButton = ({ onSubmit, disabled }: SendButtonProps) => {
+const PureSendButton = ({ onSubmit, disabled, isLoading }: SendButtonProps) => {
   return (
     <Button
       onClick={onSubmit}
@@ -228,14 +266,21 @@ const PureSendButton = ({ onSubmit, disabled }: SendButtonProps) => {
       size="icon"
       disabled={disabled}
       aria-label="Send message"
+      className="bg-[#B500FF] text-white disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      <ArrowUpIcon size={18} />
+      {isLoading ? (
+        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+      ) : (
+        <ArrowUpIcon size={18} />
+      )}
     </Button>
   );
 };
 
 const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
-  return prevProps.disabled === nextProps.disabled;
+  if (prevProps.disabled !== nextProps.disabled) return false;
+  if (prevProps.isLoading !== nextProps.isLoading) return false;
+  return true;
 });
 
 export default ChatInput;

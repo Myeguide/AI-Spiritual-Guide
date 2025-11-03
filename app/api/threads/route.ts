@@ -18,7 +18,14 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const userId = verifyToken(token);
+        const verified = verifyToken(token);
+        if (!verified) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 401 }
+            )
+        }
+        const userId = verified.userId;
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized - Invalid token' },
@@ -56,7 +63,6 @@ export async function POST(req: NextRequest) {
  * Get all threads for the authenticated user
  */
 export async function GET(req: NextRequest) {
-    console.log("Thread api with GET request is called");
     try {
         const authHeader = req.headers.get("authorization");
         const token = authHeader?.split(" ")[1] as string;
@@ -68,8 +74,14 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const userId = verifyToken(token);
-        console.log("userId :", userId);
+        const verified = verifyToken(token);
+        if (!verified) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 401 }
+            )
+        }
+        const userId = verified.userId;
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized - Invalid token' },
@@ -113,7 +125,6 @@ export async function GET(req: NextRequest) {
                 },
             }),
         ]);
-        console.log("All Threads :", threads);
         return NextResponse.json({
             success: true,
             threads,
@@ -150,7 +161,14 @@ export async function DELETE(req: NextRequest) {
             );
         }
 
-        const userId = verifyToken(token);
+        const verified = verifyToken(token);
+        if (!verified) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 401 }
+            )
+        }
+        const userId = verified.userId;
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized - Invalid token' },
@@ -223,7 +241,14 @@ export async function PATCH(req: NextRequest) {
             );
         }
 
-        const userId = verifyToken(token);
+        const verified = verifyToken(token);
+        if (!verified) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 401 }
+            )
+        }
+        const userId = verified.userId;
         if (!userId) {
             return NextResponse.json(
                 { error: 'Unauthorized - Invalid token' },

@@ -2,14 +2,16 @@ import jwt from "jsonwebtoken";
 
 interface SessionPayload {
     userId: string;
+    age: number | null;
     phoneNumber: string;
 }
 
 const jwtSecret = process.env.JWT_SECRET as string;
-export function generateToken(userId: string, phoneNumber: string) {
+export function generateToken(userId: string, age: number | null, phoneNumber: string) {
     // Create JWT payload
     const payload: SessionPayload = {
         userId,
+        age,
         phoneNumber,
     };
 
@@ -22,8 +24,11 @@ export function generateToken(userId: string, phoneNumber: string) {
 
 export function verifyToken(token: string) {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-        return decoded.userId;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string, age: number | null };
+        return {
+            userId: decoded.userId,
+            age: decoded.age,
+        };
     } catch (err) {
         console.error("Invalid token:", err);
         return null;

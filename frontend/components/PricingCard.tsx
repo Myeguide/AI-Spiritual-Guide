@@ -106,7 +106,7 @@ export const PricingCard = ({
 
       <CardFooter>
         <Button
-          className={`${isFree ? "hidden" : "w-full bg-black text-white"}`}
+          className={`${isFree ? "hidden" : "w-full bg-[#B500FF]! text-white"}`}
           variant={"outline"}
           size="lg"
           onClick={() => handleSubscribe(plan.type)}

@@ -5,7 +5,6 @@
 - [ ] Chat - Add Chat History Search
 - [ ] Chat - Add Attachments (Image, PDF)
 - [ ] Chat - Add History Card View
-- [ ] Chat - Add Scroll to Bottom Button
 
 ## Additional Features
 - [ ] Resumeable Stream with redis
@@ -20,6 +19,16 @@
 - [x] getUserMemory is called everytime can be cached
 - [ ] Retry button option in ui if server error
 - [ ] Handle the case if possible, if token runout.
-- [ ] Partion of children under (21 age) propmt
 - [x] Store message in prisma
 - [x] Store thread in prisma
+
+
+## New TODOS
+- [x] Optimize the code where api endpoints are getting called more than 1 times
+- [x] Update Astrology prompts 
+- [ ] Add concurrency for multiple users
+- [ ] Optimize data base query
+- [ ] Plan for DB selection
+- [x] Partion of children under (21 age) propmt
+- [ ] Chat - Add Scroll to Bottom
+- [ ] Handle Authentication of user login via - phoneNumber && Password

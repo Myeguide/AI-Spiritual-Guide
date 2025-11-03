@@ -3,6 +3,7 @@ import { verifyToken } from '@/lib/generate-token';
 import { SubscriptionService } from '@/lib/services/subscription.service';
 import { UserService } from '@/lib/services/user.service';
 import { getMemorySummary, updateMemory } from '@/lib/user-memory';
+import { CHILDREN_YOUTH } from '@/prompts/children_youth';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, smoothStream } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,7 +25,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userId = verifyToken(token);
+    const verified = verifyToken(token);
+    if (!verified) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 }
+      )
+    }
+    const userId = verified.userId;
+    const userAge = verified.age;
 
     if (!userId) {
       return NextResponse.json(
@@ -63,7 +72,6 @@ export async function POST(req: NextRequest) {
 
     if (isExpired) {
       await SubscriptionService.markAsExpired(activeSubscription.id);
-
       return NextResponse.json({
         success: false,
         error: 'Subscription expired',
@@ -80,10 +88,8 @@ export async function POST(req: NextRequest) {
 
     // Check remaining requests
     const requestsRemaining = activeSubscription.totalRequests - activeSubscription.requestsUsed;
-
     if (requestsRemaining <= 0) {
       await SubscriptionService.markAsExpired(activeSubscription.id);
-
       return NextResponse.json({
         success: false,
         error: 'Request limit reached',
@@ -100,12 +106,10 @@ export async function POST(req: NextRequest) {
 
     // Increment request usage
     await SubscriptionService.incrementRequestUsage(activeSubscription.id);
-
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
       compatibility: "strict"
     });
-
     const userMemory = await getMemorySummary(userId);
 
     // Classify the question and get routed response
@@ -113,11 +117,9 @@ export async function POST(req: NextRequest) {
       messages[messages.length - 1].content
     );
 
-    console.log("Question asked--->", messages[messages.length - 1])
-    console.log("Selected document based on question", routedQuestion)
-
     const contextDocuments = routedQuestion.templateContent
     const confidence = routedQuestion.confidence;
+    const isAdult = typeof userAge === 'number' && userAge > 21;
     const systemPrompt = `
     You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
     Confidence Level: ${(confidence * 100).toFixed(1)}%
@@ -127,7 +129,7 @@ export async function POST(req: NextRequest) {
     Always avoid using the word Hinduism or Hindu, instead use Vedanta, vedic, or sanatan dharma.
     
     === SPIRITUAL CONTEXT DOCUMENTS ===
-    ${contextDocuments}
+    ${isAdult ? contextDocuments : CHILDREN_YOUTH}
     
     User Context:
     ${userMemory || "No previous information about this user."}
