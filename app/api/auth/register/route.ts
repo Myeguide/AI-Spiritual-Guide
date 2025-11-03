@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
 
         // 🎟️ Generate session token
-        const sessionToken = generateToken(user.id, phoneNumber);
+        const sessionToken = generateToken(user.id, user.age, phoneNumber);
 
         // 🍪 Set session cookie
         const cookieStore = await cookies();
