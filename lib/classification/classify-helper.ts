@@ -69,7 +69,6 @@ export async function llmClassify(question: string): Promise<{
         "dharma_smrti_law",
         "practical_techniques",
         "emotional_spiritual",
-        "children_youth",
         "vedic_observance_rituals_dates",
         "astrology",
         "ayurveda_health",

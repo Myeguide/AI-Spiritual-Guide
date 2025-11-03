@@ -21,6 +21,8 @@ import { PhoneInput } from "react-international-phone";
 import InputOTPForm from "@/frontend/components/InputOtp";
 import { apiCall } from "@/utils/api-call";
 import { toast } from "sonner";
+import { syncDataFromServer } from "@/lib/sync-server";
+import { clearAllUserData } from "../dexie/queries";
 
 export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
@@ -51,15 +53,34 @@ export default function AuthForm() {
       });
 
       if (response.success) {
+        const previousUserId = useUserStore.getState().currentUserId;
+        const newUserId = response.user.id;
+
+        // If switching users, clear old data first
+        if (previousUserId && previousUserId !== newUserId) {
+          await clearAllUserData();
+        }
+
         setUser(response.user);
         setToken(response.token);
         setOtpVerified(true);
+
+        // Sync data immediately after successful login
+        try {
+          await syncDataFromServer();
+        } catch (syncError) {
+          console.error("❌ Sync failed after login:", syncError);
+          // Don't block login if sync fails
+          toast.error("Login successful but data sync failed. Please refresh.");
+        }
+
         return;
       } else {
         toast.error("No account found with this phone number");
       }
     } catch (error) {
       console.error(error);
+      toast.error("Login failed. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import { memo, useEffect } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +14,6 @@ import { deleteThread, getThreads } from "@/frontend/dexie/queries";
 import { cn } from "@/lib/utils";
 import { useLiveQuery } from "dexie-react-hooks";
 import { X } from "lucide-react";
-import { memo, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button, buttonVariants } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
@@ -21,7 +21,6 @@ import AuthForm from "./AuthForm";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { NavUser } from "./NavUser";
 import { apiCall } from "@/utils/api-call";
-import { syncDataFromServer } from "@/lib/sync-server";
 import { db } from "../dexie/db";
 
 export default function ChatSidebar() {
@@ -31,25 +30,6 @@ export default function ChatSidebar() {
     () => db.threads.orderBy("lastMessageAt").reverse().toArray(),
     []
   );
-  const [isInitialized, setIsInitialized] = useState<boolean | null>(false);
-
-  useEffect(() => {
-    const initializeSync = async () => {
-      if (isInitialized) return;
-
-      try {
-        // Sync data bidirectionally (server ↔️ IndexedDB)
-        await syncDataFromServer();
-
-        setIsInitialized(true);
-      } catch (error) {
-        console.error("❌ Error initializing data sync:", error);
-        setIsInitialized(true); // Mark as initialized even on error to prevent infinite loops
-      }
-    };
-
-    initializeSync();
-  }, [isInitialized]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,16 +115,16 @@ export default function ChatSidebar() {
 
 function PureHeader() {
   return (
-    <SidebarHeader className="flex justify-between items-center gap-4 relative">
-      <SidebarTrigger className="absolute right-1 top-2.5" />
-      <h1 className="text-2xl font-bold">
-        Chat<span className="">0</span>
-      </h1>
+    <SidebarHeader className="relative flex flex-col gap-4 p-3">
+      <div className="flex items-center justify-between w-full">
+        <img src="/ET.png" alt="logo" className="h-10 w-auto object-contain" />
+        <SidebarTrigger />
+      </div>
       <Link
         to="/chat"
         className={buttonVariants({
           variant: "default",
-          className: "w-full",
+          className: "w-full bg-[#B500FF]! text-white",
         })}
       >
         New Chat

@@ -7,9 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 // TODO: Need to be clean use service from user service
 // ============================================================================
 
-
-
-
 interface LoginRequestBody {
     phoneNumber: string;
 }
@@ -153,16 +150,18 @@ function validateRequestBody(body: object): {
 /**
  * Creates and sets session cookie
  * @param userId - User ID
+ * @param userAge - User Age
  * @param phoneNumber - User phone number
  * @returns Session token
  */
 async function createSession(
     userId: string,
+    age: number | null,
     phoneNumber: string
 ): Promise<string> {
     try {
         // Generate token
-        const sessionToken = generateToken(userId, phoneNumber);
+        const sessionToken = generateToken(userId, age, phoneNumber);
         if (!sessionToken) {
             throw new Error(ERROR_MESSAGES.TOKEN_GENERATION_FAILED);
         }
@@ -279,7 +278,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<LoginResponse
         }
 
         // Step 4: Create session
-        const sessionToken = await createSession(user.id, phoneNumber);
+        const sessionToken = await createSession(user.id, user.age, phoneNumber);
         return createSuccessResponse(sessionToken, user);
 
     } catch (error) {

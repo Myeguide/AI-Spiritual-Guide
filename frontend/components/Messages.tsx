@@ -26,7 +26,7 @@ function PureMessages({
   registerRef: (id: string, ref: HTMLDivElement | null) => void;
 }) {
   return (
-    <section className="flex flex-col space-y-12">
+    <section className="flex flex-col space-y-12 px-2">
       {messages.map((message, index) => (
         <PreviewMessage
           key={message.id}

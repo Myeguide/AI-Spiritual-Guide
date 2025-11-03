@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types/user";
+import { clearAllUserData } from "../dexie/queries";
 
 interface SubscriptionInfo {
     hasActiveSubscription: boolean;
@@ -10,16 +11,17 @@ interface SubscriptionInfo {
 
 interface IAuth {
     user: User | null;
+    currentUserId: string | null;
     loading: boolean;
     token: string | null;
     subscription: SubscriptionInfo;
 
-    setUser: (user: User | null) => void;
+    setUser: (user: User) => void;
     setLoading: (loading: boolean) => void;
     setToken: (token: string | null) => void;
     setSubscription: (subscription: Partial<SubscriptionInfo>) => void;
     fetchSubscription: () => Promise<void>;
-    logout: () => Promise<void>;
+    logout: () => void;
     isAuthenticated: () => boolean;
 }
 
@@ -28,6 +30,7 @@ export const useUserStore = create<IAuth>()(
     persist(
         (set, get) => ({
             user: null,
+            currentUserId: null,
             loading: false,
             token: null,
             subscription: {
@@ -35,7 +38,17 @@ export const useUserStore = create<IAuth>()(
                 expiresAt: null,
             },
 
-            setUser: (user) => set({ user }),
+            setUser: (user: User) => {
+                const previousUserId = get().currentUserId;
+                const newUserId = user.id;
+
+                // Check if user changed
+                if (previousUserId && previousUserId !== newUserId) {
+                    // Clear old user's data from IndexedDB
+                    clearAllUserData().catch(console.error);
+                }
+                set({ user, currentUserId: newUserId });
+            },
             setLoading: (loading) => set({ loading }),
             setToken: (token) => set({ token }),
 
@@ -56,7 +69,6 @@ export const useUserStore = create<IAuth>()(
                     });
 
                     const data = await response.json();
-
                     if (data.success) {
                         set({
                             subscription: {
@@ -71,30 +83,9 @@ export const useUserStore = create<IAuth>()(
             },
 
 
-            logout: async () => {
-                try {
-                    const res = await fetch("/api/logout", {
-                        method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${get().token}`,
-                        },
-                    });
-                    if (res.status === 200) {
-                        set({
-                            user: null,
-                            token: null,
-                            loading: false,
-                            subscription: {
-                                hasActiveSubscription: false,
-                                expiresAt: null,
-                            },
-                        });
-                    } else {
-                        console.error("Logout failed:", res.status);
-                    }
-                } catch (e) {
-                    console.error("Logout error:", e);
-                }
+            logout: () => {
+                clearAllUserData().catch(console.error);
+                set({ user: null, token: null, currentUserId: null });
             },
 
             isAuthenticated: () => {
