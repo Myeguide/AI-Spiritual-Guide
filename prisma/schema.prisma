@@ -32,6 +32,7 @@ model User {
   email       String   @unique
   age         Int?
   phoneNumber String   @unique @map("phone_number")
+  password    String   @default("")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

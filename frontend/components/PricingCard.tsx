@@ -52,7 +52,7 @@ export const PricingCard = ({
       {/* Popular Badge */}
       {plan.badge && !isCurrentPlan && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1">
+          <Badge className="bg-linear-to-r from-purple-600 to-pink-600 text-white px-4 py-1">
             {plan.badge}
           </Badge>
         </div>
@@ -80,7 +80,7 @@ export const PricingCard = ({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-grow">
+      <CardContent className="grow">
         {/* Price */}
         <div className="text-center mb-6">
           <div className="flex items-baseline justify-center">
@@ -95,7 +95,7 @@ export const PricingCard = ({
         <ul className="space-y-3">
           {plan.features.map((feature, idx) => (
             <li key={idx} className="flex items-start gap-2">
-              <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
               <span className="text-sm text-gray-500 dark:text-gray-300">
                 {feature}
               </span>

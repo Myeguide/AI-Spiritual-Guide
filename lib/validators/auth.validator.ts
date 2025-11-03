@@ -3,10 +3,10 @@ import { z } from 'zod'
 export const sendOTPSchema = z.object({
     phoneNumber: z
         .string({
-            required_error: "Phone number is required", // 👈 custom message for missing
+            required_error: "Phone number is required", // custom message for missing
         })
         .trim()
-        .regex(/^\+?[1-9]\d{7,14}$/, "Invalid phone number format"), // 👈 custom message for invalid format
+        .regex(/^\+?[1-9]\d{7,14}$/, "Invalid phone number format"), // custom message for invalid format
 });
 
 export const verifyOTPSchema = z.object({
@@ -20,5 +20,6 @@ export const registerSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email'),
-    age: z.number().int().positive().optional()
+    age: z.number().int().positive().optional(),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
 });

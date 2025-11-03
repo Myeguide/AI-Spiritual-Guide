@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { generateToken } from "@/lib/generate-token";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { genSaltSync, hashSync } from "bcrypt-ts"
 
 export async function POST(req: NextRequest) {
     try {
@@ -13,10 +14,12 @@ export async function POST(req: NextRequest) {
 
         // 🧩 Validate input with Zod
         const validatedData = registerSchema.parse(body);
-        const { phoneNumber, code, firstName, lastName, email, age } = validatedData;
+        const { phoneNumber, code, firstName, lastName, email, age, password } = validatedData;
 
         // 🔐 Verify OTP
         const isValid = await OTPService.verifyOTP(phoneNumber, code);
+        const salt = genSaltSync(10);
+        const hashedPassword = hashSync(password, salt);
 
         if (!isValid) {
             return NextResponse.json(
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
                 firstName,
                 lastName,
                 email,
-                age
+                age,
+                password: hashedPassword
             });
         } catch (error) {
             console.error("❌ Error creating user:", error);
