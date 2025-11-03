@@ -2,6 +2,7 @@ import { generateToken } from "@/lib/generate-token";
 import { UserService } from "@/lib/services/user.service";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { compareSync } from "bcrypt-ts"
 
 // ============================================================================
 // TODO: Need to be clean use service from user service
@@ -9,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 interface LoginRequestBody {
     phoneNumber: string;
+    password: string;
 }
 
 interface UserResponse {
@@ -55,6 +57,7 @@ const ERROR_MESSAGES = {
     INTERNAL_ERROR: "An unexpected error occurred. Please try again.",
     TOKEN_GENERATION_FAILED: "Failed to generate session token",
     DATABASE_ERROR: "Database operation failed",
+    INVALID_PASSWORD: "Incorrect password"
 } as const;
 
 const ERROR_CODES = {
@@ -65,6 +68,7 @@ const ERROR_CODES = {
     INTERNAL_ERROR: "INTERNAL_SERVER_ERROR",
     TOKEN_ERROR: "TOKEN_GENERATION_ERROR",
     DATABASE_ERROR: "DATABASE_ERROR",
+    INVALID_PASSWORD: "INVALID_PASSWORD",
 } as const;
 
 // ============================================================================
@@ -101,6 +105,7 @@ function normalizePhoneNumber(phoneNumber: string): string {
 function validateRequestBody(body: object): {
     valid: boolean;
     phoneNumber?: string;
+    password?: string;
     error?: { message: string; code: string };
 } {
     if (!body || typeof body !== "object") {
@@ -113,7 +118,7 @@ function validateRequestBody(body: object): {
         };
     }
 
-    const { phoneNumber } = body as LoginRequestBody;
+    const { phoneNumber, password } = body as LoginRequestBody;
 
     if (!phoneNumber) {
         return {
@@ -140,6 +145,7 @@ function validateRequestBody(body: object): {
     return {
         valid: true,
         phoneNumber: normalizedPhone,
+        password,
     };
 }
 
@@ -264,7 +270,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<LoginResponse
             );
         }
 
-        const { phoneNumber } = validation;
+        const { phoneNumber, password } = validation;
 
         // Step 3: Find user
         const user = await UserService.getUserByPhoneOrEmail(phoneNumber);
@@ -275,6 +281,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<LoginResponse
                 ERROR_CODES.USER_NOT_FOUND,
                 404
             );
+        }
+        // verify password by decoding hashedPassword
+        const verifyPassword = compareSync(password as string, user.password);
+        if (!verifyPassword) {
+            return createErrorResponse(
+                ERROR_MESSAGES.INVALID_PASSWORD,
+                ERROR_CODES.INVALID_PASSWORD,
+                401
+            )
         }
 
         // Step 4: Create session
