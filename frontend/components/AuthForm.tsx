@@ -39,7 +39,7 @@ export default function AuthForm() {
   });
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
-  const [registerAge, setRegisterAge] = useState("");
+  const [registerDob, setRegisterDob] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
 
   const [registeredUser, setRegisteredUser] = useState(false);
@@ -105,21 +105,17 @@ export default function AuthForm() {
 
     try {
       const response = await apiCall("/api/send-otp", "POST", {
-        firstName: registerName.firstName,
-        lastName: registerName.lastName,
-        email: registerEmail,
-        age: parseInt(registerAge),
         phoneNumber: registerPhone,
-        password: registerPassword,
       });
 
       if (response.success) {
         setRegisteredUser(response);
       } else {
-        alert(response.error || response.message || "Registration failed");
+        toast.error(response.error || response.message || "Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
+      toast.error("Something went wrong during registration");
     } finally {
       setLoading(false);
     }
@@ -130,13 +126,27 @@ export default function AuthForm() {
   }
 
   if (registeredUser) {
+    // calculate age from dob before rendering OTP form
+    const today = new Date();
+    const birthDate = new Date(registerDob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
     return (
       <InputOTPForm
         phoneNumber={registerPhone}
         firstName={registerName.firstName}
         lastName={registerName.lastName}
         email={registerEmail}
-        age={parseInt(registerAge)}
+        dob={registerDob}
+        age={age}
         password={registerPassword}
         onVerified={() => setOtpVerified(true)}
       />
@@ -251,16 +261,17 @@ export default function AuthForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-age">Age</Label>
+                <Label htmlFor="register-dob">Date of Birth</Label>
                 <Input
-                  id="register-age"
-                  type="number"
-                  placeholder="30"
-                  value={registerAge}
-                  onChange={(e) => setRegisterAge(e.target.value)}
+                  id="register-dob"
+                  type="date"
+                  value={registerDob}
+                  onChange={(e) => setRegisterDob(e.target.value)}
                   required
                 />
               </div>
+
+
               <div className="space-y-2">
                 <Label htmlFor="register-phone">Phone</Label>
                 <PhoneInput

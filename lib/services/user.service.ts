@@ -9,6 +9,7 @@ export class UserService {
         email: string;
         age?: number;
         password: string;
+        dob: Date
     }) {
         const expiryDate = new Date();
         expiryDate.setFullYear(expiryDate.getFullYear() + 2);
@@ -32,7 +33,8 @@ export class UserService {
                     lastName: data.lastName,
                     email: data.email,
                     age: data.age ?? null,
-                    password: data.password
+                    password: data.password,
+                    dob: data.dob
                 },
                 select: {
                     id: true,
@@ -42,6 +44,7 @@ export class UserService {
                     email: true,
                     age: true,
                     password: true,
+                    dob: true
                 }
             });
 
