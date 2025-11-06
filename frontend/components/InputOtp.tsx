@@ -36,6 +36,7 @@ export default function InputOTPForm({
   age,
   password,
   onVerified,
+  dob
 }: {
   phoneNumber: string;
   firstName?: string;
@@ -43,6 +44,7 @@ export default function InputOTPForm({
   email?: string;
   age?: number;
   password?: string;
+  dob: string;
   onVerified: () => void;
 }) {
   const { setUser, setToken, setLoading, loading } = useUserStore();
@@ -62,6 +64,7 @@ export default function InputOTPForm({
         email,
         age,
         password,
+        dob
       });
 
       if (response.success) {

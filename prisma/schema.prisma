@@ -26,15 +26,16 @@ model SubscriptionTier {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  firstName   String   @map("first_name")
-  lastName    String   @map("last_name")
-  email       String   @unique
+  id          String    @id @default(cuid())
+  firstName   String    @map("first_name")
+  lastName    String    @map("last_name")
+  email       String    @unique
   age         Int?
-  phoneNumber String   @unique @map("phone_number")
-  password    String   @default("")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  dob         DateTime? @map("dob")
+  phoneNumber String    @unique @map("phone_number")
+  password    String    @default("")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Current active subscription tracking
   activeSubscriptionId String? @unique @map("active_subscription_id")
