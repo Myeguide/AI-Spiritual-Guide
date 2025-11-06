@@ -45,6 +45,15 @@ export default function AuthForm() {
   const [registeredUser, setRegisteredUser] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const isPasswordValid = (password: string) => {
+    const regex =
+      /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(password);
+  };
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,12 +271,12 @@ export default function AuthForm() {
                   inputClassName="w-full"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
 
+              <div className="space-y-2">
+                <Label htmlFor="register-password">Password</Label>
                 <div className="relative">
                   <Input
-                    id="password"
+                    id="register-password"
                     type={showPassword ? "text" : "password"}
                     className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter password"
@@ -275,7 +284,6 @@ export default function AuthForm() {
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
                   />
-
                   <Button
                     type="button"
                     variant="ghost"
@@ -285,8 +293,49 @@ export default function AuthForm() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </Button>
                 </div>
+                {/* Password validation message */}
+                {!isPasswordValid(registerPassword) && registerPassword.length > 0 && (
+                  <p className="text-sm text-red-500">
+                    Password must be at least 8 characters, include 1 uppercase letter, 1
+                    number, and 1 special character.
+                  </p>
+                )}
               </div>
-              <Button type="submit" className="w-full bg-[#B500FF]">
+
+              {/* CONFIRM PASSWORD */}
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-2 flex items-center hover:bg-transparent"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </Button>
+                </div>
+                {confirmPassword &&
+                  confirmPassword !== registerPassword && (
+                    <p className="text-sm text-red-500">Passwords do not match.</p>
+                  )}
+              </div>
+              <Button type="submit"
+                disabled={
+                  loading ||
+                  !isPasswordValid(registerPassword) ||
+                  confirmPassword !== registerPassword
+                }
+                className="w-full bg-[#B500FF]">
                 {loading ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
