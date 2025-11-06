@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
         // 🧩 Validate input with Zod
         const validatedData = registerSchema.parse(body);
-        const { phoneNumber, code, firstName, lastName, email, age, password } = validatedData;
+        const { phoneNumber, code, firstName, lastName, email, age, password, dob } = validatedData;
 
         // 🔐 Verify OTP
         const isValid = await OTPService.verifyOTP(phoneNumber, code);
@@ -32,13 +32,12 @@ export async function POST(req: NextRequest) {
         let user = await UserService.getUserByPhoneOrEmail(phoneNumber, email);
 
         if (user) {
-            // User already exists - they should use login flow instead
             return NextResponse.json(
                 {
                     success: false,
                     error: "User already exists. Please use login instead of registration."
                 },
-                { status: 409 } // 409 Conflict
+                { status: 409 }
             );
         }
 
@@ -49,22 +48,24 @@ export async function POST(req: NextRequest) {
                 lastName,
                 email,
                 age,
-                password: hashedPassword
+                dob,
+                password: hashedPassword,
             });
         } catch (error) {
             console.error("❌ Error creating user:", error);
 
-            // Check for unique constraint violations
-            if (error instanceof Error && error.message.includes('Unique constraint')) {
+            if (error instanceof Error && error.message.includes("Unique constraint")) {
                 return NextResponse.json(
-                    { success: false, error: "User with this phone number or email already exists" },
+                    {
+                        success: false,
+                        error: "User with this phone number or email already exists",
+                    },
                     { status: 409 }
                 );
             }
 
             throw error;
         }
-
 
         // 🎟️ Generate session token
         const sessionToken = generateToken(user.id, user.age, phoneNumber);
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-            maxAge: 30 * 24 * 60 * 60, // 30 days
+            maxAge: 30 * 24 * 60 * 60,
             path: "/",
         });
 
@@ -88,7 +89,6 @@ export async function POST(req: NextRequest) {
             },
             { status: 200 }
         );
-
     } catch (error) {
         console.error("[POST /api/auth/register] ❌ Error:", error);
 

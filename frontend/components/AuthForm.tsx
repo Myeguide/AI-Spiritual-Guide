@@ -39,12 +39,21 @@ export default function AuthForm() {
   });
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
-  const [registerAge, setRegisterAge] = useState("");
+  const [registerDob, setRegisterDob] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
 
   const [registeredUser, setRegisteredUser] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const isPasswordValid = (password: string) => {
+    const regex =
+      /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(password);
+  };
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,21 +105,17 @@ export default function AuthForm() {
 
     try {
       const response = await apiCall("/api/send-otp", "POST", {
-        firstName: registerName.firstName,
-        lastName: registerName.lastName,
-        email: registerEmail,
-        age: parseInt(registerAge),
         phoneNumber: registerPhone,
-        password: registerPassword,
       });
 
       if (response.success) {
         setRegisteredUser(response);
       } else {
-        alert(response.error || response.message || "Registration failed");
+        toast.error(response.error || response.message || "Registration failed");
       }
     } catch (error) {
       console.error("Registration error:", error);
+      toast.error("Something went wrong during registration");
     } finally {
       setLoading(false);
     }
@@ -121,13 +126,27 @@ export default function AuthForm() {
   }
 
   if (registeredUser) {
+    // calculate age from dob before rendering OTP form
+    const today = new Date();
+    const birthDate = new Date(registerDob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
     return (
       <InputOTPForm
         phoneNumber={registerPhone}
         firstName={registerName.firstName}
         lastName={registerName.lastName}
         email={registerEmail}
-        age={parseInt(registerAge)}
+        dob={registerDob}
+        age={age}
         password={registerPassword}
         onVerified={() => setOtpVerified(true)}
       />
@@ -242,16 +261,17 @@ export default function AuthForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-age">Age</Label>
+                <Label htmlFor="register-dob">Date of Birth</Label>
                 <Input
-                  id="register-age"
-                  type="number"
-                  placeholder="30"
-                  value={registerAge}
-                  onChange={(e) => setRegisterAge(e.target.value)}
+                  id="register-dob"
+                  type="date"
+                  value={registerDob}
+                  onChange={(e) => setRegisterDob(e.target.value)}
                   required
                 />
               </div>
+
+
               <div className="space-y-2">
                 <Label htmlFor="register-phone">Phone</Label>
                 <PhoneInput
@@ -262,12 +282,12 @@ export default function AuthForm() {
                   inputClassName="w-full"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
 
+              <div className="space-y-2">
+                <Label htmlFor="register-password">Password</Label>
                 <div className="relative">
                   <Input
-                    id="password"
+                    id="register-password"
                     type={showPassword ? "text" : "password"}
                     className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter password"
@@ -275,7 +295,6 @@ export default function AuthForm() {
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
                   />
-
                   <Button
                     type="button"
                     variant="ghost"
@@ -285,8 +304,49 @@ export default function AuthForm() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </Button>
                 </div>
+                {/* Password validation message */}
+                {!isPasswordValid(registerPassword) && registerPassword.length > 0 && (
+                  <p className="text-sm text-red-500">
+                    Password must be at least 8 characters, include 1 uppercase letter, 1
+                    number, and 1 special character.
+                  </p>
+                )}
               </div>
-              <Button type="submit" className="w-full bg-[#B500FF]">
+
+              {/* CONFIRM PASSWORD */}
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="w-full border rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Confirm password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-2 flex items-center hover:bg-transparent"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </Button>
+                </div>
+                {confirmPassword &&
+                  confirmPassword !== registerPassword && (
+                    <p className="text-sm text-red-500">Passwords do not match.</p>
+                  )}
+              </div>
+              <Button type="submit"
+                disabled={
+                  loading ||
+                  !isPasswordValid(registerPassword) ||
+                  confirmPassword !== registerPassword
+                }
+                className="w-full bg-[#B500FF]">
                 {loading ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (
