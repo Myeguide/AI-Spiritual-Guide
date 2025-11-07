@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 import { apiCall } from "@/utils/api-call";
 import ShimmerPricingScreen from "./Shimmer";
 import { toast } from "sonner";
+import { PlanType } from "@/types/payment";
 
 declare global {
   interface Window {
@@ -100,7 +101,7 @@ export default function PricingPage() {
 
   const handleSubscribe = async (planType: string) => {
     // Free plan - just redirect to chat
-    if (planType === "free") {
+    if (planType === PlanType.FREE) {
       navigate("/chat");
       return;
     }
@@ -171,10 +172,9 @@ export default function PricingPage() {
           } catch (error) {
             console.error("Payment verification error:", error);
             alert(
-              `Payment Verification Failed\n\n${
-                error instanceof Error
-                  ? error.message
-                  : "Please contact support with your payment ID"
+              `Payment Verification Failed\n\n${error instanceof Error
+                ? error.message
+                : "Please contact support with your payment ID"
               }`
             );
           } finally {
@@ -203,8 +203,7 @@ export default function PricingPage() {
     } catch (error) {
       console.error("Subscribe error:", error);
       alert(
-        `Subscription Failed\n\n${
-          error instanceof Error ? error.message : "Please try again later"
+        `Subscription Failed\n\n${error instanceof Error ? error.message : "Please try again later"
         }`
       );
       setLoading("");

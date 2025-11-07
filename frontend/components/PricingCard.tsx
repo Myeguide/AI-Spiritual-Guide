@@ -10,6 +10,7 @@ import { Button } from "@/frontend/components/ui/button";
 import { Badge } from "@/frontend/components/ui/badge";
 import { Check } from "lucide-react";
 import { Plan } from "@/types/plan";
+import { PlanType } from "@/types/payment";
 
 interface PricingCardProps {
   plan: Plan;
@@ -26,9 +27,8 @@ export const PricingCard = ({
 }: PricingCardProps) => {
   const isCurrentPlan = currentPlan === plan.type;
   const isLoading = loading === plan.type;
-  const isFree = plan.type === "free";
-  const isFamily = plan.type === "family";
-
+  const isFree = plan.type === PlanType.FREE;
+  const isFamily = plan.type === PlanType.FAMILY;
   // Determine button text based on state
   const getButtonText = () => {
     if (isLoading) return "Processing...";
@@ -43,11 +43,10 @@ export const PricingCard = ({
 
   return (
     <Card
-      className={`relative flex flex-col ${
-        plan.popular && !isCurrentPlan
-          ? "border-purple-500 border-2 shadow-lg scale-105"
-          : ""
-      } ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
+      className={`relative flex flex-col ${plan.popular && !isCurrentPlan
+        ? "border-purple-500 border-2 shadow-lg scale-105"
+        : ""
+        } ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
     >
       {/* Popular Badge */}
       {plan.badge && !isCurrentPlan && (
@@ -84,7 +83,7 @@ export const PricingCard = ({
         {/* Price */}
         <div className="text-center mb-6">
           <div className="flex items-baseline justify-center">
-            <span className="text-2xl font-bold">{plan.displayPrice}/</span>
+            <span className="text-2xl font-bold">&#8377;{plan.price}/</span>
             <span className="text-gray-500 dark:text-gray-400">
               {plan.billingCycle}
             </span>
