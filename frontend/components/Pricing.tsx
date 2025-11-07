@@ -56,12 +56,11 @@ export default function PricingPage() {
   useEffect(() => {
     const getAllPlans = async () => {
       try {
-        const response = await fetch("/api/subscription-tier");
-        if (!response.ok) {
+        const response = await apiCall("/api/subscription-tier", "GET");
+        if (!response.success) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
         }
-        const data = await response.json();
-        const plansWithExtras = data.data.map((item: any, index: number) => ({
+        const plansWithExtras = response.data.map((item: any, index: number) => ({
           ...item,
           ...(planExtras.find((plan) => item.type === plan.planType) || {}),
         }));

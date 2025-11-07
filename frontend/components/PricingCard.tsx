@@ -85,7 +85,7 @@ export const PricingCard = ({
           <div className="flex items-baseline justify-center">
             <span className="text-2xl font-bold">&#8377;{plan.price}/</span>
             <span className="text-gray-500 dark:text-gray-400">
-              {plan.billingCycle}
+              {plan.totalRequests} Messages
             </span>
           </div>
         </div>
