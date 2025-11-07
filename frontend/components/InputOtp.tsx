@@ -33,7 +33,6 @@ export default function InputOTPForm({
   firstName,
   lastName,
   email,
-  age,
   password,
   onVerified,
   dob
@@ -62,7 +61,6 @@ export default function InputOTPForm({
         firstName,
         lastName,
         email,
-        age,
         password,
         dob
       });
