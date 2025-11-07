@@ -7,6 +7,7 @@ import { generateToken } from "@/lib/generate-token";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { genSaltSync, hashSync } from "bcrypt-ts"
+import { calculateAge } from "@/utils/date-utils";
 
 export async function POST(req: NextRequest) {
     try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
         // 🧩 Validate input with Zod
         const validatedData = registerSchema.parse(body);
-        const { phoneNumber, code, firstName, lastName, email, age, password, dob } = validatedData;
+        const { phoneNumber, code, firstName, lastName, email, password, dob } = validatedData;
 
         // 🔐 Verify OTP
         const isValid = await OTPService.verifyOTP(phoneNumber, code);
@@ -30,7 +31,6 @@ export async function POST(req: NextRequest) {
 
         // 🔍 Check if user already exists
         let user = await UserService.getUserByPhoneOrEmail(phoneNumber, email);
-
         if (user) {
             return NextResponse.json(
                 {
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
                 { status: 409 }
             );
         }
+        const age = calculateAge(dob);
 
         try {
             user = await UserService.createUserWithFreeSubscription({

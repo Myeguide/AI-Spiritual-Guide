@@ -24,41 +24,6 @@ import { toast } from "sonner";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { clearAllUserData } from "../dexie/queries";
 
-/**
- * Calculate age from date of birth
- * @param dob - Date of birth (string or Date object)
- * @returns Age in years
- */
-export function calculateAge(dob: string | Date): number {
-  if (!dob) return 0;
-
-  const today = new Date();
-  const birthDate = new Date(dob);
-
-  // Validate the date
-  if (isNaN(birthDate.getTime())) {
-    return 0;
-  }
-
-  // Check if birth date is in the future
-  if (birthDate > today) {
-    return 0;
-  }
-
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  // Adjust age if birthday hasn't occurred this year
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-
-  return age;
-}
-
 export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
@@ -161,8 +126,6 @@ export default function AuthForm() {
   }
 
   if (registeredUser) {
-    const age = calculateAge(registerDob);
-
     return (
       <InputOTPForm
         phoneNumber={registerPhone}
@@ -170,7 +133,6 @@ export default function AuthForm() {
         lastName={registerName.lastName}
         email={registerEmail}
         dob={registerDob}
-        age={age}
         password={registerPassword}
         onVerified={() => setOtpVerified(true)}
       />
