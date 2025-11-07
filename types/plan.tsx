@@ -11,7 +11,7 @@ export interface Plan {
   icon: React.ReactNode;
   popular?: boolean;
   badge?: string;
-  billingCycle: string;
+  totalRequests: string;
 }
 
 
