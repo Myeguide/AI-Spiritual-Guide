@@ -3,8 +3,6 @@ import { generateText } from 'ai';
 import fs from 'fs';
 import path from 'path';
 
-
-
 export interface ClassificationResult {
     documentType: string;
     confidence: number;
@@ -14,11 +12,34 @@ export interface ClassificationResult {
     matchedKeywords: string[];
 }
 
-const PROMPTS_DIR = path.join(process.cwd(), 'prompts');
+const POSSIBLE_PROMPTS_DIRS = [
+    path.join(process.cwd(), 'prompts'),
+    path.join(process.cwd(), '.next', 'server', 'prompts'),
+    path.join(__dirname, '..', '..', 'prompts'),
+    path.join(__dirname, '..', '..', '..', 'prompts'),
+    '/var/task/prompts', // Common Lambda path
+];
 
 // Cache templates in memory (optional optimization)
 const templateCache = new Map<string, string>();
 const DEFAULT_GENERAL_TEMPLATE = `You are a compassionate spiritual guide. Answer questions with wisdom from Vedic traditions, providing practical guidance while respecting all spiritual paths.`;
+
+/**
+ * Find the correct prompts directory
+ */
+function findPromptsDir(): string | null {
+    for (const dir of POSSIBLE_PROMPTS_DIRS) {
+        try {
+            if (fs.existsSync(dir)) {
+                return dir;
+            }
+        } catch (error) {
+            // Continue to next path
+        }
+    }
+    return null;
+}
+
 
 /**
  * Load template from local file system
@@ -29,25 +50,39 @@ export function loadTemplate(documentType: string): string {
         return templateCache.get(documentType)!;
     }
 
+    const promptsDir = findPromptsDir();
+
+    if (!promptsDir) {
+        return DEFAULT_GENERAL_TEMPLATE;
+    }
+
     try {
-        const filePath = path.join(PROMPTS_DIR, `${documentType}.txt`);
+        const filePath = path.join(promptsDir, `${documentType}.txt`);
+
+        if (!fs.existsSync(filePath)) {
+            throw new Error(`File not found: ${filePath}`);
+        }
+
         const content = fs.readFileSync(filePath, 'utf-8');
 
         // Cache it
         templateCache.set(documentType, content);
-
         return content;
     } catch (error) {
         console.error(`Failed to load template for ${documentType}:`, error);
 
         // Fallback to general template
         try {
-            const generalPath = path.join(PROMPTS_DIR, 'general.txt');
-            const generalContent = fs.readFileSync(generalPath, 'utf-8');
-            return generalContent;
-        } catch {
-            return DEFAULT_GENERAL_TEMPLATE;
+            const generalPath = path.join(promptsDir, 'general.txt');
+
+            if (fs.existsSync(generalPath)) {
+                const generalContent = fs.readFileSync(generalPath, 'utf-8');
+                return generalContent;
+            }
+        } catch (fallbackError) {
+            console.error('Failed to load general template:', fallbackError);
         }
+        return DEFAULT_GENERAL_TEMPLATE;
     }
 }
 
