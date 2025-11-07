@@ -8,7 +8,6 @@ export async function GET() {
                 totalRequests: "asc",
             },
         });
-        console.log('tiers =========>', tiers)
         return NextResponse.json({ success: true, data: tiers }, { status: 200 });
     } catch (error) {
         console.error("Error fetching priority tiers:", error);
