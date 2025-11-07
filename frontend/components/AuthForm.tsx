@@ -24,6 +24,41 @@ import { toast } from "sonner";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { clearAllUserData } from "../dexie/queries";
 
+/**
+ * Calculate age from date of birth
+ * @param dob - Date of birth (string or Date object)
+ * @returns Age in years
+ */
+export function calculateAge(dob: string | Date): number {
+  if (!dob) return 0;
+
+  const today = new Date();
+  const birthDate = new Date(dob);
+
+  // Validate the date
+  if (isNaN(birthDate.getTime())) {
+    return 0;
+  }
+
+  // Check if birth date is in the future
+  if (birthDate > today) {
+    return 0;
+  }
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  // Adjust age if birthday hasn't occurred this year
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+}
+
 export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
@@ -49,11 +84,9 @@ export default function AuthForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const isPasswordValid = (password: string) => {
-    const regex =
-      /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     return regex.test(password);
   };
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +144,9 @@ export default function AuthForm() {
       if (response.success) {
         setRegisteredUser(response);
       } else {
-        toast.error(response.error || response.message || "Registration failed");
+        toast.error(
+          response.error || response.message || "Registration failed"
+        );
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -126,18 +161,7 @@ export default function AuthForm() {
   }
 
   if (registeredUser) {
-    // calculate age from dob before rendering OTP form
-    const today = new Date();
-    const birthDate = new Date(registerDob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
+    const age = calculateAge(registerDob);
 
     return (
       <InputOTPForm
@@ -271,7 +295,6 @@ export default function AuthForm() {
                 />
               </div>
 
-
               <div className="space-y-2">
                 <Label htmlFor="register-phone">Phone</Label>
                 <PhoneInput
@@ -305,12 +328,13 @@ export default function AuthForm() {
                   </Button>
                 </div>
                 {/* Password validation message */}
-                {!isPasswordValid(registerPassword) && registerPassword.length > 0 && (
-                  <p className="text-sm text-red-500">
-                    Password must be at least 8 characters, include 1 uppercase letter, 1
-                    number, and 1 special character.
-                  </p>
-                )}
+                {!isPasswordValid(registerPassword) &&
+                  registerPassword.length > 0 && (
+                    <p className="text-sm text-red-500">
+                      Password must be at least 8 characters, include 1
+                      uppercase letter, 1 number, and 1 special character.
+                    </p>
+                  )}
               </div>
 
               {/* CONFIRM PASSWORD */}
@@ -332,21 +356,28 @@ export default function AuthForm() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-2 flex items-center hover:bg-transparent"
                   >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
                   </Button>
                 </div>
-                {confirmPassword &&
-                  confirmPassword !== registerPassword && (
-                    <p className="text-sm text-red-500">Passwords do not match.</p>
-                  )}
+                {confirmPassword && confirmPassword !== registerPassword && (
+                  <p className="text-sm text-red-500">
+                    Passwords do not match.
+                  </p>
+                )}
               </div>
-              <Button type="submit"
+              <Button
+                type="submit"
                 disabled={
                   loading ||
                   !isPasswordValid(registerPassword) ||
                   confirmPassword !== registerPassword
                 }
-                className="w-full bg-[#B500FF]">
+                className="w-full bg-[#B500FF]"
+              >
                 {loading ? (
                   <LoaderCircle className="animate-spin" />
                 ) : (

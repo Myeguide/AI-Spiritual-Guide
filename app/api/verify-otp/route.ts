@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { OTPService } from '@/lib/services/otp.service';
+import { OTPService, OTPError } from '@/lib/services/otp.service';
 import { verifyOTPSchema } from '@/lib/validators/auth.validator';
 import { z } from 'zod';
 
@@ -27,17 +27,23 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Verify OTP error:', error);
+        if (error instanceof OTPError) {
+            return NextResponse.json(
+                { success: false, message: error.message, code: error.code },
+                { status: error.statusCode }
+            );
+        }
 
         if (error instanceof z.ZodError) {
             return NextResponse.json(
-                { success: false, error: error.errors[0].message },
+                { success: false, message: 'Invalid request data', errors: error.errors },
                 { status: 400 }
             );
         }
 
+        console.error('[API] OTP verify error:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to verify OTP' },
+            { success: false, message: 'Internal server error' },
             { status: 500 }
         );
     }
