@@ -1,4 +1,5 @@
 import { Sparkles, Users, Zap, Crown } from "lucide-react";
+import { PlanType } from "./payment";
 
 export interface Plan {
   type: string;
@@ -16,24 +17,24 @@ export interface Plan {
 
 export const planExtras = [
   {
-    billingCycle: "1500 Message",
+    planType: PlanType.FAMILY,
     icon: <Sparkles className="w-6 h-6" />,
+    badge: "Best for Families",
   },
   {
-    billingCycle: "50 Message",
+    planType: PlanType.MONTHLY,
     icon: <Zap className="w-6 h-6" />,
     popular: true,
-    badge: "Most Popular",
-  },
-  {
-    billingCycle: "500 Message",
-    icon: <Crown className="w-6 h-6" />,
     badge: "Best Value",
   },
   {
-    billingCycle: "5 Message",
+    planType: PlanType.ANNUALLY,
+    icon: <Crown className="w-6 h-6" />,
+    badge: "Most Popular",
+  },
+  {
+    planType: PlanType.FREE,
     icon: <Users className="w-6 h-6" />,
-    badge: "Best for Families",
   },
 ];
 

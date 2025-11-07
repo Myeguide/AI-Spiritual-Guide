@@ -63,7 +63,7 @@ export default function PricingPage() {
         const data = await response.json();
         const plansWithExtras = data.data.map((item: any, index: number) => ({
           ...item,
-          ...(planExtras[index] || {}), // Fallback to empty object if index doesn't exist
+          ...(planExtras.find((plan) => item.type === plan.planType) || {}),
         }));
         setPlans(plansWithExtras);
       } catch (error) {
