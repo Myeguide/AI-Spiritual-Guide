@@ -37,9 +37,14 @@ export async function createRazorpayOrder(
 ): Promise<RazorpayOrder> {
     try {
         const razorpay = getRazorpayInstance();
+        const numeric = Number(String(amount).replace(/[^0-9.-]+/g, ''));
+        if (Number.isNaN(numeric)) {
+            throw new PaymentError('Invalid amount format', 'INVALID_AMOUNT', 400);
+        }
+        const amountInPaise = Math.round(numeric * 100); // integer paise
 
         const orderOptions = {
-            amount: amount, // amount in paise
+            amount: amountInPaise,
             currency: currency,
             receipt: receipt,
             notes: notes || {},
