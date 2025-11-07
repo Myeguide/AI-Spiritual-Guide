@@ -5,7 +5,7 @@ export async function GET() {
     try {
         const tiers = await prisma.subscriptionTier.findMany({
             orderBy: {
-                id: "asc",
+                price: "asc",
             },
         });
 
