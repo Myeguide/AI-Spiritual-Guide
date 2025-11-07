@@ -27,8 +27,6 @@ export class SubscriptionService {
             // Calculate end date based on validityDays
             const expiresAt = this.calculateEndDate(data.validityDays, data.type, now);
 
-            console.log("Subscription dates:", { startDate, expiresAt });
-
             // Use transaction to handle previous subscription closure and new subscription creation
             const subscription = await prisma.$transaction(async (tx) => {
                 // Check for existing active or pending subscriptions
@@ -100,12 +98,8 @@ export class SubscriptionService {
 
                 return newSubscription;
             });
-
-            console.log("Created new subscription:", subscription);
-
             return subscription;
         } catch (error) {
-            console.error('Create subscription error:', error);
             throw new DatabaseError('Failed to create subscription', error);
         }
     }
@@ -125,11 +119,8 @@ export class SubscriptionService {
                     tier: true
                 }
             });
-
-            console.log("Activated subscription:", subscriptionId);
             return subscription;
         } catch (error) {
-            console.error('Activate subscription error:', error);
             throw new DatabaseError('Failed to activate subscription', error);
         }
     }
@@ -182,7 +173,6 @@ export class SubscriptionService {
                 }
             });
         } catch (error) {
-            console.error('Mark subscription as expired error:', error);
             throw new DatabaseError('Failed to mark subscription as expired', error);
         }
     }
@@ -221,7 +211,6 @@ export class SubscriptionService {
 
             return subscription; // Return as-is, don't auto-expire here
         } catch (error) {
-            console.error('Get active subscription error:', error);
             throw new DatabaseError('Failed to get active subscription', error);
         }
     }
@@ -239,7 +228,6 @@ export class SubscriptionService {
 
             return subscription;
         } catch (error) {
-            console.error('Increment request usage error:', error);
             throw new DatabaseError('Failed to increment request usage', error);
         }
     }
@@ -260,11 +248,8 @@ export class SubscriptionService {
                     tier: true
                 }
             });
-
-            console.log("Cancelled subscription:", subscriptionId);
             return subscription;
         } catch (error) {
-            console.error('Cancel subscription error:', error);
             throw new DatabaseError('Failed to cancel subscription', error);
         }
     }

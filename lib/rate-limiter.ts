@@ -87,8 +87,6 @@ export async function seedSubscriptionTiers(): Promise<void> {
     ],
     skipDuplicates: true,
   });
-
-  console.log("✅ Priority tiers seeded successfully");
 }
 
 // Run using:
