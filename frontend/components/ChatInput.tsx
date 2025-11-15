@@ -73,7 +73,7 @@ function PureChatInput({
       status === "streaming" ||
       status === "submitted" ||
       isSubmitting ||
-      subscription.hasActiveSubscription ||
+      !subscription.hasActiveSubscription ||
       !!rateLimitError,
     [input, status, isSubmitting, rateLimitError]
   );
@@ -193,7 +193,7 @@ function PureChatInput({
                 placeholder={
                   !subscription.hasActiveSubscription
                     ? "Please subscribe to send messages"
-                    : "What can I do for you?"
+                    : "Ask your questions"
                 }
                 className={cn(
                   "w-full px-4 py-3 border-none shadow-none dark:bg-transparent",

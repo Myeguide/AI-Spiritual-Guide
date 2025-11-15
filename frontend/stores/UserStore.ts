@@ -69,11 +69,12 @@ export const useUserStore = create<IAuth>()(
                     });
 
                     const data = await response.json();
+                    console.log(data);
                     if (data.success) {
                         set({
                             subscription: {
-                                hasActiveSubscription: data.hasActiveSubscription,
-                                expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+                                hasActiveSubscription: data.data.hasActiveSubscription,
+                                expiresAt: data.data.expiresAt ? new Date(data.data.expiresAt) : null,
                             },
                         });
                     }
@@ -98,6 +99,7 @@ export const useUserStore = create<IAuth>()(
             partialize: (state) => ({
                 user: state.user,
                 token: state.token,
+                subscription: state.subscription,
             }),
         }
     )
