@@ -1,8 +1,8 @@
+import React from "react";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/frontend/components/ui/card";
@@ -11,6 +11,7 @@ import { Badge } from "@/frontend/components/ui/badge";
 import { Check } from "lucide-react";
 import { Plan } from "@/types/plan";
 import { PlanType } from "@/types/payment";
+import { getIconComponent } from "@/frontend/utils/iconMapper";
 
 interface PricingCardProps {
   plan: Plan;
@@ -19,6 +20,7 @@ interface PricingCardProps {
   handleSubscribe: (planType: string) => Promise<void>;
 }
 
+const PRIMARY_COLOR = "#B500FF";
 export const PricingCard = ({
   plan,
   currentPlan,
@@ -28,35 +30,22 @@ export const PricingCard = ({
   const isCurrentPlan = currentPlan === plan.type;
   const isLoading = loading === plan.type;
   const isFree = plan.type === PlanType.FREE;
-  const isFamily = plan.type === PlanType.FAMILY;
-  // Determine button text based on state
+
   const getButtonText = () => {
     if (isLoading) return "Processing...";
     if (isCurrentPlan) return "Current Plan";
     if (isFree) return "Get Started";
-    if (isFamily) return "Coming Soon";
     return "Buy Now";
   };
 
-  // Button should be disabled when loading, current plan (except free), or family plan
-  const isButtonDisabled = isLoading || (isCurrentPlan && !isFree) || isFamily;
+  const isButtonDisabled = isLoading || (isCurrentPlan && !isFree);
 
   return (
     <Card
-      className={`relative flex flex-col ${plan.popular && !isCurrentPlan
-        ? "border-purple-500 border-2 shadow-lg scale-105"
-        : ""
-        } ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
+      className={`relative bg-white rounded-2xl shadow-lg border border-gray-100 ${
+        isCurrentPlan ? "ring-2 ring-green-500" : ""
+      }`}
     >
-      {/* Popular Badge */}
-      {plan.badge && !isCurrentPlan && (
-        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-          <Badge className="bg-linear-to-r from-purple-600 to-pink-600 text-white px-4 py-1">
-            {plan.badge}
-          </Badge>
-        </div>
-      )}
-
       {/* Current Plan Badge */}
       {isCurrentPlan && (
         <div className="absolute -top-4 right-4">
@@ -69,51 +58,65 @@ export const PricingCard = ({
         </div>
       )}
 
-      <CardHeader className="text-center">
-        <div className="mx-auto w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center text-purple-600 dark:text-purple-300">
-          {plan.icon}
+      <CardHeader>
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 text-white"
+          style={{ backgroundColor: PRIMARY_COLOR }}
+        >
+          {getIconComponent(plan.icon)}
         </div>
-        <CardTitle className="text-2xl"></CardTitle>
-        <CardDescription className="mt-2 text-gray-400">
+        <div className="flex items-center justify-between mb-2">
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            {plan.name}
+          </CardTitle>
+          <span className={`text-sm text-${PRIMARY_COLOR}`}>{plan.badge}</span>
+        </div>
+        <CardDescription className="text-gray-600 text-sm">
           {plan.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="grow">
-        {/* Price */}
-        <div className="text-center mb-6">
-          <div className="flex items-baseline justify-center">
-            <span className="text-2xl font-bold">&#8377;{plan.price}/</span>
-            <span className="text-gray-500 dark:text-gray-400">
-              {plan.totalRequests} Messages
+      <CardContent>
+        <div className="mb-6">
+          <div className="flex items-baseline">
+            <span className="text-4xl font-bold text-gray-900">
+              ₹{plan.price}
+            </span>
+            <span className="text-gray-500 ml-2">
+              / {plan.totalRequests} Messages
             </span>
           </div>
         </div>
 
-        {/* Features */}
-        <ul className="space-y-3">
-          {plan.features.map((feature, idx) => (
-            <li key={idx} className="flex items-start gap-2">
-              <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-              <span className="text-sm text-gray-500 dark:text-gray-300">
-                {feature}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-
-      <CardFooter>
         <Button
-          className={`${isFree ? "hidden" : "w-full bg-[#B500FF]! text-white"}`}
-          variant={"outline"}
-          size="lg"
+          className="w-full mb-6"
+          style={{ backgroundColor: PRIMARY_COLOR, color: "white" }}
+          variant="default"
           onClick={() => handleSubscribe(plan.type)}
           disabled={isButtonDisabled}
         >
           {getButtonText()}
         </Button>
-      </CardFooter>
+
+        <div>
+          <p className="font-semibold text-gray-900 mb-4">
+            {plan.name} plan includes:
+          </p>
+          <ul className="space-y-3">
+            {plan.features.map((feature, index) => (
+              <li key={index} className="flex items-start gap-3">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ backgroundColor: `${PRIMARY_COLOR}20` }}
+                >
+                  <Check className="w-3 h-3" style={{ color: PRIMARY_COLOR }} />
+                </div>
+                <span className="text-sm text-gray-700">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
     </Card>
   );
 };

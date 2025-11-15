@@ -1,4 +1,3 @@
-import { Sparkles, Users, Zap, Crown } from "lucide-react";
 import { PlanType } from "./payment";
 
 export interface Plan {
@@ -8,33 +7,25 @@ export interface Plan {
   displayPrice: string;
   description: string;
   features: string[];
-  icon: React.ReactNode;
-  popular?: boolean;
+  icon: string;
   badge?: string;
   totalRequests: string;
 }
 
-
 export const planExtras = [
   {
-    planType: PlanType.FAMILY,
-    icon: <Sparkles className="w-6 h-6" />,
-    badge: "Best for Families",
-  },
-  {
     planType: PlanType.MONTHLY,
-    icon: <Zap className="w-6 h-6" />,
-    popular: true,
+    icon: "zap",
     badge: "Best Value",
   },
   {
     planType: PlanType.ANNUALLY,
-    icon: <Crown className="w-6 h-6" />,
+    icon: "crown",
     badge: "Most Popular",
   },
   {
     planType: PlanType.FREE,
-    icon: <Users className="w-6 h-6" />,
+    icon: "users",
   },
 ];
 
