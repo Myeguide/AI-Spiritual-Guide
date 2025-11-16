@@ -43,7 +43,11 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="text-sm font-medium">Chat Navigator</h3>
+            <img
+              src="/ET.png"
+              alt="logo"
+              className="h-8 w-auto object-contain"
+            />
             <Button
               onClick={() => {
                 navigate("/chat");

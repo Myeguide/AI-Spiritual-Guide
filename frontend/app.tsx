@@ -7,10 +7,11 @@ import PricingPage from "@/frontend/components/Pricing";
 import { useEffect, useState } from "react";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { useUserStore } from "./stores/UserStore";
+import UserProfile from "@/frontend/components/Profile";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated, fetchSubscription } = useUserStore();
 
   // Sync on app mount if already authenticated
   useEffect(() => {
@@ -58,6 +59,12 @@ export default function App() {
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (isAuthenticated()) {
+      fetchSubscription();
+    }
+  }, [fetchSubscription, isAuthenticated]);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -67,6 +74,7 @@ export default function App() {
           <Route path=":id" element={<Thread />} />
         </Route>
         <Route path="/billing" element={<PricingPage />} />
+        <Route path="/account" element={<UserProfile />} />
         <Route path="*" element={<p> Not found </p>} />
       </Routes>
     </BrowserRouter>
