@@ -61,6 +61,10 @@ function PureChatInput({
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
   const subscription = useUserStore((state) => state.subscription);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<{
+    message: string;
+    details: string;
+  } | null>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 72,
     maxHeight: 200,
@@ -72,11 +76,10 @@ function PureChatInput({
       !input.trim() ||
       status === "streaming" ||
       status === "submitted" ||
-      isSubmitting ||
-      !subscription.hasActiveSubscription ||
-      !!rateLimitError,
-    [input, status, isSubmitting, rateLimitError]
+      isSubmitting,
+    [input, status, isSubmitting]
   );
+  
   const { complete } = useMessageSummary();
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
@@ -84,13 +87,25 @@ function PureChatInput({
       toast.error("Please enter a message");
       return;
     }
+    
+    // Check rate limit first - show error and popup
+    if (rateLimitError) {
+      return; // Don't proceed with submission
+    }
+    
+    // Check subscription
+    if (!subscription.hasActiveSubscription) {
+      setSubscriptionError({
+        message: "Subscription Required",
+        details: "Please subscribe to send messages",
+      });
+      return;
+    }
+    
     if (status === "streaming" || status === "submitted") {
       return;
     }
-    if (rateLimitError) {
-      toast.error(rateLimitError.message);
-      return;
-    }
+    
     if (isSubmitting) {
       return;
     }
@@ -101,14 +116,14 @@ function PureChatInput({
       if (!id) {
         try {
           navigate(`/chat/${threadId}`);
-          await createThread(threadId);
+          await createThread(threadId); // create thread locally first
           const threadResponse = await apiCall("/api/threads", "POST", {
             threadId,
           });
           if (!threadResponse.success) {
             throw new Error("Failed to create thread on server");
           }
-          complete(currentInput.trim(), {
+                    complete(currentInput.trim(), {
             body: { threadId, messageId, isTitle: true },
           });
         } catch (error) {
@@ -119,7 +134,7 @@ function PureChatInput({
         }
       }
       try {
-        await createMessage(threadId, userMessage);
+        await createMessage(threadId, userMessage); // save message locally first
       } catch (error) {
         console.error("Error saving message locally:", error);
         toast.error("Failed to save message locally");
@@ -137,6 +152,7 @@ function PureChatInput({
       setInput("");
       adjustHeight(true);
       textareaRef.current?.focus();
+      setSubscriptionError(null);
     } catch (error) {
       console.error("Error submitting message:", error);
       toast.error("Failed to send message. Please try again.");
@@ -155,7 +171,10 @@ function PureChatInput({
     complete,
     navigate,
     isSubmitting,
+    rateLimitError,
+    subscription.hasActiveSubscription,
   ]);
+  
   if (!isAuthenticated) {
     return (
       <div className="fixed inset-0 z-90 bg-background bg-opacity-90 flex items-center justify-center">
@@ -175,12 +194,16 @@ function PureChatInput({
     setInput(e.target.value);
     adjustHeight();
   };
+  
+  // Combine errors - rateLimitError takes precedence
+  const displayError = rateLimitError || subscriptionError;
+  
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
-      {rateLimitError && (
+      {displayError && (
         <TokenLimitExceeded
           navigate={navigate}
-          reason={rateLimitError.details}
+          reason={displayError.details}
         />
       )}
       <div className="bg-secondary rounded-t-[20px] p-2 pb-0 w-full">
@@ -191,7 +214,9 @@ function PureChatInput({
                 id="chat-input"
                 value={input}
                 placeholder={
-                  !subscription.hasActiveSubscription
+                  rateLimitError
+                    ? rateLimitError.message
+                    : !subscription.hasActiveSubscription
                     ? "Please subscribe to send messages"
                     : "Ask your questions"
                 }
