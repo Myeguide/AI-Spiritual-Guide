@@ -41,6 +41,7 @@ export default function AuthForm() {
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerDob, setRegisterDob] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const [registeredUser, setRegisteredUser] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -87,6 +88,7 @@ export default function AuthForm() {
 
         return;
       } else {
+        //error should be thrown be using  frontend but from backend it should come
         toast.error("No account found with this phone number");
       }
     } catch (error) {
@@ -99,6 +101,12 @@ export default function AuthForm() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!acceptedTerms) {
+      toast.error("Please accept the terms and conditions to continue");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -331,12 +339,37 @@ export default function AuthForm() {
                   </p>
                 )}
               </div>
+              <div className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="accept-terms"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  required
+                />
+                <Label
+                  htmlFor="accept-terms"
+                  className="text-sm font-normal leading-relaxed cursor-pointer"
+                >
+                  I accept the{" "}
+                  <a
+                    href="https://myeternalguide.com/terms-conditions/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline hover:text-primary/80"
+                  >
+                    Terms and Conditions
+                  </a>
+                </Label>
+              </div>
               <Button
                 type="submit"
                 disabled={
                   loading ||
                   !isPasswordValid(registerPassword) ||
-                  confirmPassword !== registerPassword
+                  confirmPassword !== registerPassword ||
+                  !acceptedTerms
                 }
                 className="w-full bg-[#B500FF]"
               >
