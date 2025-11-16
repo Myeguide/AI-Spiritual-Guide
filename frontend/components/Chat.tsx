@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Menu, MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { apiCall } from "@/utils/api-call";
 
 interface ChatProps {
@@ -24,6 +24,9 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     message: string;
     details?: any;
   } | null>(null);
+  
+  // Use ref to prevent race conditions between onResponse and onError
+  const errorSetRef = useRef(false);
 
   const {
     isNavigatorVisible,
@@ -47,8 +50,10 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     initialMessages,
     experimental_throttle: 50,
     onFinish: async (message) => {
-      // message now contains proper parts array
+      // Clear error on successful completion
+      errorSetRef.current = false;
       setRateLimitError(null);
+      
       const aiMessage: UIMessage = {
         id: message.id,
         parts: message.parts as UIMessage["parts"],
@@ -67,61 +72,39 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       }
     },
     onResponse: async (response) => {
-      // Read response body once, outside the conditionals
-      let errorData: { error: string; message: string } | null = null;
-      if (!response.ok) {
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-          errorData = {
-            error: "Unknown Error",
-            message: "Failed to parse server response",
-          };
-        }
-      }
-
-      // Handle different error types
-      if (response.status === 403) {
-        console.error("Subscription error:", errorData);
-        setRateLimitError({
-          message: errorData?.error || "Subscription Error",
-          details:
-            errorData?.message || "Please check your subscription status",
-        });
-        console.log("here value being se for subscripiton");
-      } else if (response.status === 429) {
-        console.error("Rate limit exceeded:", errorData);
-        setRateLimitError({
-          message: errorData?.error || "Request Limit Exceeded",
-          details: errorData?.message || "You have reached your request limit",
-        });
-      } else if (response.status === 401) {
-        console.error("Unauthorized:", errorData);
-        setRateLimitError({
-          message: "Unauthorized",
-          details: "Please login again",
-        });
-      } else if (!response.ok) {
-        console.error("API error:", errorData);
-        setRateLimitError({
-          message: errorData?.error || "Error",
-          details: errorData?.message || "Something went wrong",
-        });
-      } else {
-        // Clear error on success
-        console.log("inside else");
+      if (response.ok) {
         setRateLimitError(null);
       }
+      // That's it! Don't track status codes
     },
+    
     onError: (e) => {
-      // Handle network or other errors
-      console.error("Chat error:", e, rateLimitError?.details);
+      let serverError = {
+        error: "Error",
+        message: "Something went wrong",
+      };
+      
+      try {
+        const parsed = JSON.parse(e.message);
+        serverError = {
+          error: parsed.error || "Error",
+          message: parsed.message || "Something went wrong",
+        };
+      } catch {
+        serverError.message = e.message;
+      }
+      
+      setRateLimitError({
+        message: serverError.error,
+        details: serverError.message,
+      });
     },
     headers: {
       Authorization: `Bearer ${userConfig}`,
     },
   });
+
+
 
   return (
     <div className="relative w-full">
