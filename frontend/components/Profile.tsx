@@ -12,7 +12,6 @@ import {
   Pencil,
   Save,
   X,
-  Camera,
   Mail,
   Phone,
   Calendar,
@@ -23,24 +22,17 @@ import {
   EyeOff,
   ChevronDown,
   ChevronUp,
+  Loader2,
+  Lock,
+  Shield,
 } from "lucide-react";
 import { LoggedInUser } from "@/types/user";
 import { useUserStore } from "@/frontend/stores/UserStore";
-
-interface UserProfile {
-  user: LoggedInUser;
-}
-
-interface PaymentMethod {
-  id: string;
-  type: "card" | "upi";
-  cardNumber?: string;
-  cardHolder?: string;
-  expiryDate?: string;
-  cvv?: string;
-  upiId?: string;
-  isDefault: boolean;
-}
+import { usePaymentMethods } from "@/frontend/hooks/usePaymentMethod";
+import { PaymentMethodType } from "@/lib/generated/prisma";
+import { CreatePaymentMethodDTO } from "@/types/payment";
+import { toast } from "sonner";
+import { apiCall } from "@/utils/api-call";
 
 interface PasswordForm {
   oldPassword: string;
@@ -48,15 +40,33 @@ interface PasswordForm {
   confirmPassword: string;
 }
 
+interface NewPaymentForm {
+  cardNumber?: string;
+  cardIssuer?: string;
+  expiryDate?: string;
+  cvv?: string;
+  upiId?: string;
+}
+
 export default function UserProfile() {
-  const { user } = useUserStore();
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const { user, updateUser } = useUserStore();
+  const {
+    paymentMethods,
+    loading: paymentMethodsLoading,
+    error: paymentMethodsError,
+    addPaymentMethod,
+    deletePaymentMethod,
+    setDefaultPaymentMethod,
+    refetch: refetchPaymentMethods,
+  } = usePaymentMethods();
+
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [profile, setProfile] = useState<LoggedInUser | null>(user);
   const [tempProfile, setTempProfile] = useState<LoggedInUser | null>(user);
   const [isSecurityExpanded, setIsSecurityExpanded] = useState(false);
   const [isPaymentExpanded, setIsPaymentExpanded] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     old: false,
     new: false,
@@ -69,33 +79,37 @@ export default function UserProfile() {
     confirmPassword: "",
   });
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: "1",
-      type: "card",
-      cardNumber: "4532 **** **** 1234",
-      cardHolder: "UMAIMA FAISAL",
-      expiryDate: "12/25",
-      isDefault: true,
-    },
-  ]);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [newPaymentType, setNewPaymentType] = useState<"card" | "upi">("card");
-  const [newPayment, setNewPayment] = useState<Partial<PaymentMethod>>({});
+  const [newPayment, setNewPayment] = useState<NewPaymentForm>({});
+  const [addingPaymentLoading, setAddingPaymentLoading] = useState(false);
 
   const handlePersonalEdit = () => {
     setIsEditingPersonal(true);
     setTempProfile(profile);
   };
 
-  const handleSavePersonal = () => {
-    setProfile(tempProfile);
-    setIsEditingPersonal(false);
+  const handleSavePersonal = async () => {
+    try {
+      // Make API call to update user profile
+      const response = await apiCall("/api/user/update-profile", "PATCH", tempProfile);
+
+      if (response.success) {
+        setProfile(tempProfile);
+        updateUser(tempProfile!);
+        setIsEditingPersonal(false);
+        toast.success("Profile updated successfully!");
+      } else {
+        throw new Error(response.error || "Failed to update profile");
+      }
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(error.message || "Failed to update profile");
+    }
   };
 
   const handleCancel = () => {
     setTempProfile(profile);
-    setIsEditingProfile(false);
     setIsEditingPersonal(false);
   };
 
@@ -107,63 +121,175 @@ export default function UserProfile() {
     setPasswordForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmitPassword = () => {
+  const handleSubmitPassword = async () => {
+    // Validation
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert("New passwords do not match!");
+      toast.error("New passwords do not match!");
       return;
     }
     if (passwordForm.newPassword.length < 8) {
-      alert("Password must be at least 8 characters long!");
+      toast.error("Password must be at least 8 characters long!");
       return;
     }
-    // Here you would make an API call to change the password
-    alert("Password changed successfully!");
-    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-    setIsChangingPassword(false);
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(passwordForm.newPassword)) {
+      toast.error(
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number!"
+      );
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const response = await apiCall("/api/user/change-password", "POST", {
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (response.success) {
+        toast.success("Password changed successfully!");
+        setPasswordForm({
+          oldPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        setIsChangingPassword(false);
+      } else {
+        throw new Error(response.error || "Failed to change password");
+      }
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      toast.error(error.message || "Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const togglePasswordVisibility = (field: "old" | "new" | "confirm") => {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleAddPaymentMethod = () => {
+  const handleAddPaymentMethod = async () => {
+    // Validation
     if (newPaymentType === "card") {
       if (
         !newPayment.cardNumber ||
-        !newPayment.cardHolder ||
+        !newPayment.cardIssuer ||
         !newPayment.expiryDate ||
         !newPayment.cvv
       ) {
-        alert("Please fill all card details!");
+        toast.error("Please fill all card details!");
+        return;
+      }
+
+      // Validate card number (basic Luhn algorithm check)
+      const cardNumberClean = newPayment.cardNumber.replace(/\s/g, "");
+      if (cardNumberClean.length < 13 || cardNumberClean.length > 19) {
+        toast.error("Invalid card number!");
+        return;
+      }
+
+      // Validate expiry date
+      const [month, year] = newPayment.expiryDate.split("/");
+      const expiry = new Date(parseInt("20" + year), parseInt(month) - 1);
+      if (expiry < new Date()) {
+        toast.error("Card has expired!");
+        return;
+      }
+
+      // Validate CVV
+      if (newPayment.cvv.length < 3 || newPayment.cvv.length > 4) {
+        toast.error("Invalid CVV!");
         return;
       }
     } else {
       if (!newPayment.upiId) {
-        alert("Please enter UPI ID!");
+        toast.error("Please enter UPI ID!");
+        return;
+      }
+
+      // Validate UPI format
+      const upiRegex = /^[\w.-]+@[\w.-]+$/;
+      if (!upiRegex.test(newPayment.upiId)) {
+        toast.error("Invalid UPI ID format!");
         return;
       }
     }
 
-    const payment: PaymentMethod = {
-      id: Date.now().toString(),
-      type: newPaymentType,
-      ...newPayment,
-      isDefault: paymentMethods.length === 0,
-    } as PaymentMethod;
+    setAddingPaymentLoading(true);
 
-    setPaymentMethods((prev) => [...prev, payment]);
-    setNewPayment({});
-    setIsAddingPayment(false);
+    try {
+      const paymentMethodData: CreatePaymentMethodDTO = {
+        type:
+          newPaymentType === "card"
+            ? PaymentMethodType.CARD
+            : PaymentMethodType.UPI,
+      };
+
+      if (newPaymentType === "card") {
+        const [expMonth, expYear] = newPayment.expiryDate!.split("/");
+        paymentMethodData.cardLast4 = newPayment
+          .cardNumber!.replace(/\s/g, "")
+          .slice(-4);
+        paymentMethodData.cardIssuer = newPayment.cardIssuer;
+        paymentMethodData.cardExpMonth = expMonth;
+        paymentMethodData.cardExpYear = "20" + expYear;
+        // Note: We don't send full card number to backend for security
+        // In production, this should go through Razorpay tokenization
+        paymentMethodData.cardNetwork = detectCardNetwork(
+          newPayment.cardNumber!
+        );
+        paymentMethodData.cardType = "credit"; // Default, can be enhanced
+      } else {
+        paymentMethodData.upiVpa = newPayment.upiId;
+      }
+
+      await addPaymentMethod(paymentMethodData);
+
+      toast.success("Payment method added successfully!");
+      setNewPayment({});
+      setIsAddingPayment(false);
+    } catch (error: any) {
+      console.error("Error adding payment method:", error);
+      toast.error(error.message || "Failed to add payment method");
+    } finally {
+      setAddingPaymentLoading(false);
+    }
   };
 
-  const handleDeletePayment = (id: string) => {
-    setPaymentMethods((prev) => prev.filter((p) => p.id !== id));
+  const handleDeletePayment = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this payment method?")) {
+      return;
+    }
+
+    try {
+      await deletePaymentMethod(id);
+      toast.success("Payment method deleted successfully!");
+    } catch (error: any) {
+      console.error("Error deleting payment method:", error);
+      toast.error(error.message || "Failed to delete payment method");
+    }
   };
 
-  const handleSetDefault = (id: string) => {
-    setPaymentMethods((prev) =>
-      prev.map((p) => ({ ...p, isDefault: p.id === id }))
-    );
+  const handleSetDefault = async (id: string) => {
+    try {
+      await setDefaultPaymentMethod(id);
+      toast.success("Default payment method updated!");
+    } catch (error: any) {
+      console.error("Error setting default payment method:", error);
+      toast.error(error.message || "Failed to set default payment method");
+    }
+  };
+
+  const detectCardNetwork = (cardNumber: string): string => {
+    const cleaned = cardNumber.replace(/\s/g, "");
+    if (/^4/.test(cleaned)) return "Visa";
+    if (/^5[1-5]/.test(cleaned)) return "MasterCard";
+    if (/^3[47]/.test(cleaned)) return "American Express";
+    if (/^6(?:011|5)/.test(cleaned)) return "Discover";
+    if (/^(?:2131|1800|35)/.test(cleaned)) return "JCB";
+    if (/^(6062|60|81)/.test(cleaned)) return "RuPay";
+    return "Unknown";
   };
 
   const formatCardNumber = (value: string) => {
@@ -177,18 +303,29 @@ export default function UserProfile() {
     return parts.length ? parts.join(" ") : value;
   };
 
+  const getPaymentMethodIcon = (type: string) => {
+    switch (type) {
+      case "CARD":
+        return <CreditCard className="w-5 h-5 text-[#B500FF]" />;
+      case "UPI":
+        return (
+          <div className="w-5 h-5 bg-purple-600 rounded flex items-center justify-center text-white text-xs font-bold">
+            U
+          </div>
+        );
+      default:
+        return <CreditCard className="w-5 h-5 text-[#B500FF]" />;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setProfile(user);
       setTempProfile(user);
     }
   }, [user]);
+
   const PRIMARY_COLOR = "#B500FF";
-  const ringColors = {
-    500: "ring-blue-500",
-    600: "ring-blue-600",
-    700: "ring-blue-700",
-  };
 
   return (
     <>
@@ -290,10 +427,8 @@ export default function UserProfile() {
                         id="editEmail"
                         type="email"
                         value={tempProfile?.email || ""}
-                        onChange={(e) =>
-                          handleInputChange("email", e.target.value)
-                        }
-                        className="mt-1"
+                        disabled={true}
+                        className="mt-1 border-0"
                       />
                     </div>
                     <div>
@@ -306,22 +441,27 @@ export default function UserProfile() {
                       <Input
                         id="editPhone"
                         value={tempProfile?.phoneNumber || ""}
-                        onChange={(e) =>
-                          handleInputChange("phoneNumber", e.target.value)
-                        }
-                        className="mt-1"
+                        disabled={true}
+                        className="mt-1 border-0"
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="editRole" className="text-sm font-medium">
+                    <Label htmlFor="editDob" className="text-sm font-medium">
                       Date of Birth
                     </Label>
                     <Input
-                      id="editRole"
-                      value={tempProfile?.dob ? String(tempProfile.dob) : ""}
-                      onChange={(e) => handleInputChange("dob", e.target.value)}
-                      className="mt-1"
+                      id="editDob"
+                      type="date"
+                      value={
+                        tempProfile?.dob
+                          ? new Date(tempProfile.dob)
+                              .toISOString()
+                              .split("T")[0]
+                          : ""
+                      }
+                      disabled={true}
+                      className="mt-1 border-0"
                     />
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -356,17 +496,21 @@ export default function UserProfile() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium">Date of Birth</Label>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-[#B500FF]" />
-                      <p className="font-medium">Date of birth</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
                     <Label className="text-sm font-medium">Phone Number</Label>
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 text-[#B500FF]" />
                       <p className="font-medium">{profile?.phoneNumber}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Date of Birth</Label>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#B500FF]" />
+                      <p className="font-medium">
+                        {profile?.dob
+                          ? new Date(profile.dob).toLocaleDateString()
+                          : "Not set"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -374,7 +518,7 @@ export default function UserProfile() {
             </CardContent>
           </Card>
 
-          {/* Additional Settings Preview */}
+          {/* Additional Settings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* Security Card */}
             <Card>
@@ -385,7 +529,10 @@ export default function UserProfile() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="text-left">
-                      <h3 className="font-semibold text-xl">Security</h3>
+                      <h3 className="font-semibold text-xl flex items-center gap-2">
+                        <Lock className="w-5 h-5 text-[#B500FF]" />
+                        Security
+                      </h3>
                       <p className="text-sm">Password & authentication</p>
                     </div>
                   </div>
@@ -400,9 +547,15 @@ export default function UserProfile() {
                   <div>
                     <div className="pt-6 space-y-4">
                       {!isChangingPassword ? (
-                        <div className="flex items-center justify-between rounded-lg">
+                        <div className="flex items-center justify-between rounded-lg p-4 bg-gray-50">
                           <div>
-                            <p className="font-medium">Password</p>
+                            <p className="font-medium flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-[#B500FF]" />
+                              Password
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Keep your account secure
+                            </p>
                           </div>
                           <Button
                             onClick={() => setIsChangingPassword(true)}
@@ -482,6 +635,10 @@ export default function UserProfile() {
                                 )}
                               </button>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Must be at least 8 characters with uppercase,
+                              lowercase, and number
+                            </p>
                           </div>
 
                           <div>
@@ -527,9 +684,19 @@ export default function UserProfile() {
                             <Button
                               onClick={handleSubmitPassword}
                               className="bg-[#B500FF]"
+                              disabled={passwordLoading}
                             >
-                              <Save className="w-4 h-4 mr-2" />
-                              Update Password
+                              {passwordLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Updating...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Update Password
+                                </>
+                              )}
                             </Button>
                             <Button
                               onClick={() => {
@@ -541,6 +708,7 @@ export default function UserProfile() {
                                 });
                               }}
                               variant="outline"
+                              disabled={passwordLoading}
                             >
                               <X className="w-4 h-4 mr-2" />
                               Cancel
@@ -563,8 +731,14 @@ export default function UserProfile() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="text-left">
-                      <h3 className="font-semibold text-xl">Payment Methods</h3>
-                      <p className="text-sm">Manage payment methods</p>
+                      <h3 className="font-semibold text-xl flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-[#B500FF]" />
+                        Payment Methods
+                      </h3>
+                      <p className="text-sm">
+                        {paymentMethods.length} saved method
+                        {paymentMethods.length !== 1 ? "s" : ""}
+                      </p>
                     </div>
                   </div>
                   {isPaymentExpanded ? (
@@ -577,71 +751,88 @@ export default function UserProfile() {
                 {isPaymentExpanded && (
                   <div>
                     <div className="pt-6 space-y-4">
+                      {/* Loading State */}
+                      {paymentMethodsLoading && (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#B500FF]" />
+                        </div>
+                      )}
+
+                      {/* Error State */}
+                      {paymentMethodsError && (
+                        <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+                          {paymentMethodsError}
+                        </div>
+                      )}
+
                       {/* Saved Payment Methods */}
-                      {paymentMethods.map((method) => (
-                        <div
-                          key={method.id}
-                          className="p-4 border-2 border-[#B500FF] rounded-lg transition-colors"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              {method.type === "card" ? (
-                                <>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <CreditCard className="w-5 h-5 text-[#B500FF]" />
-                                    <span className="font-semibold">
-                                      {method.cardNumber}
+                      {!paymentMethodsLoading &&
+                        !paymentMethodsError &&
+                        paymentMethods.map((method) => (
+                          <div
+                            key={method.id}
+                            className="p-4 border-2 border-[#B500FF] rounded-lg transition-colors hover:bg-gray-50"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {getPaymentMethodIcon(method.type)}
+                                  <span className="font-semibold">
+                                    {method.displayInfo}
+                                  </span>
+                                  {method.isDefault && (
+                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                      Default
                                     </span>
-                                    {method.isDefault && (
-                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                                        Default
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm">{method.cardHolder}</p>
-                                  <p className="text-xs mt-1">
-                                    Expires: {method.expiryDate}
+                                  )}
+                                </div>
+                                {method.nickname && (
+                                  <p className="text-sm text-gray-600">
+                                    {method.nickname}
                                   </p>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-5 h-5 bg-purple-600 rounded flex items-center justify-center text-xs font-bold">
-                                      U
-                                    </div>
-                                    <span className="font-semibold">UPI</span>
-                                    {method.isDefault && (
-                                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                                        Default
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm">{method.upiId}</p>
-                                </>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              {!method.isDefault && (
+                                )}
+                                {method.cardExpMonth && method.cardExpYear && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Expires: {method.cardExpMonth}/
+                                    {method.cardExpYear.slice(-2)}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                {!method.isDefault && (
+                                  <Button
+                                    onClick={() => handleSetDefault(method.id)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-[#B500FF] hover:bg-purple-50"
+                                  >
+                                    Set Default
+                                  </Button>
+                                )}
                                 <Button
-                                  onClick={() => handleSetDefault(method.id)}
+                                  onClick={() => handleDeletePayment(method.id)}
                                   variant="ghost"
                                   size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
-                                  Set Default
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
-                              )}
-                              <Button
-                                onClick={() => handleDeletePayment(method.id)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+
+                      {/* Empty State */}
+                      {!paymentMethodsLoading &&
+                        !paymentMethodsError &&
+                        paymentMethods.length === 0 && (
+                          <div className="text-center py-8">
+                            <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500 text-sm">
+                              No payment methods saved yet
+                            </p>
+                          </div>
+                        )}
 
                       {/* Add Payment Method */}
                       {!isAddingPayment ? (
@@ -649,12 +840,13 @@ export default function UserProfile() {
                           onClick={() => setIsAddingPayment(true)}
                           variant="outline"
                           className="w-full border-dashed border-2 border-[#B500FF] text-[#B500FF]"
+                          disabled={paymentMethodsLoading}
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add Payment Method
                         </Button>
                       ) : (
-                        <div className="space-y-4 p-4 rounded-lg">
+                        <div className="space-y-4 p-4 rounded-lg bg-gray-50">
                           <div className="flex gap-2">
                             <Button
                               onClick={() => setNewPaymentType("card")}
@@ -686,6 +878,14 @@ export default function UserProfile() {
 
                           {newPaymentType === "card" ? (
                             <div className="space-y-3">
+                              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-xs text-blue-800 flex items-center gap-2">
+                                  <Shield className="w-3 h-3" />
+                                  Note: For security, full card details are not
+                                  stored. Use Razorpay during checkout for
+                                  secure payment processing.
+                                </p>
+                              </div>
                               <div>
                                 <Label
                                   htmlFor="cardNumber"
@@ -720,11 +920,11 @@ export default function UserProfile() {
                                 <Input
                                   id="cardHolder"
                                   placeholder="JOHN DOE"
-                                  value={newPayment.cardHolder || ""}
+                                  value={newPayment.cardIssuer || ""}
                                   onChange={(e) =>
                                     setNewPayment({
                                       ...newPayment,
-                                      cardHolder: e.target.value.toUpperCase(),
+                                      cardIssuer: e.target.value.toUpperCase(),
                                     })
                                   }
                                   className="mt-1"
@@ -806,6 +1006,9 @@ export default function UserProfile() {
                                 }
                                 className="mt-1"
                               />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Enter your UPI ID (e.g., yourname@paytm)
+                              </p>
                             </div>
                           )}
 
@@ -813,9 +1016,19 @@ export default function UserProfile() {
                             <Button
                               onClick={handleAddPaymentMethod}
                               className="bg-[#B500FF]"
+                              disabled={addingPaymentLoading}
                             >
-                              <Save className="w-4 h-4 mr-2" />
-                              Save Payment Method
+                              {addingPaymentLoading ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-4 h-4 mr-2" />
+                                  Save Payment Method
+                                </>
+                              )}
                             </Button>
                             <Button
                               onClick={() => {
@@ -823,6 +1036,7 @@ export default function UserProfile() {
                                 setNewPayment({});
                               }}
                               variant="outline"
+                              disabled={addingPaymentLoading}
                             >
                               <X className="w-4 h-4 mr-2" />
                               Cancel

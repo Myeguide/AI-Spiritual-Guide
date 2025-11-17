@@ -1,6 +1,6 @@
 import { useUserStore } from "@/frontend/stores/UserStore";
 
-export const apiCall = async (endpoint: string, method: string, body?: object) => {
+export const apiCall = async (endpoint: string, method: string, body?: any) => {
     const token = useUserStore.getState().token;
     const res = await fetch(endpoint, {
         method: method,

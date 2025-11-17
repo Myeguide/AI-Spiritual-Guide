@@ -1,6 +1,7 @@
 import { PlanType } from "./payment";
 
 export interface Plan {
+  id: string;
   type: string;
   name: string;
   price: number;
@@ -30,17 +31,28 @@ export const planExtras = [
 ];
 
 export interface Subscription {
-  id: number;
-  planType: string;
-  status: string;
-  startDate: string;
-  endDate: string;
-  daysRemaining: number;
-}
-
-export interface SubscriptionStatus {
+  expiresAt: string;
   hasActiveSubscription: boolean;
-  subscription: Subscription | null;
+  isExpired: boolean;
+  statusMessage: string;
+  subscription: {
+    id: string;
+    amount: string;
+    cancelledAt: null;
+    createdAt: string;
+    currency: string;
+    expiresAt: string;
+    planType: string;
+    requestsUsed: number;
+    startDate: string;
+    status: string;
+    tier: object;
+    tierId: string;
+    totalRequests: number;
+    updatedAt: string;
+    userId: string;
+  };
+  totalSubscriptionsCount: number;
 }
 
 // Step 3: Configure and open Razorpay checkout
