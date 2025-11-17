@@ -18,7 +18,6 @@ export const usePlans = () => {
         const fetchPlans = async () => {
             // Check if we need to refetch
             if (!shouldRefetch()) {
-                console.log('Using cached plans');
                 return;
             }
 

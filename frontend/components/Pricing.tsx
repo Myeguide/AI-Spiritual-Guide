@@ -9,6 +9,18 @@ import ShimmerPricingScreen from "./Shimmer";
 import { toast } from "sonner";
 import { PlanType } from "@/types/payment";
 import { usePlans } from "@/frontend/hooks/usePlans";
+import { usePaymentMethods } from "@/frontend/hooks/usePaymentMethod";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/frontend/components/ui/dialog";
+import { Button } from "@/frontend/components/ui/button";
+import { Checkbox } from "@/frontend/components/ui/checkbox";
+import { Label } from "@/frontend/components/ui/label";
+import { CreditCard, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -18,17 +30,26 @@ declare global {
 
 export default function PricingPage() {
   const { user, fetchSubscription } = useUserStore();
-  const { plans, isLoading: plansLoading } = usePlans(); // Use the custom hook
+  const { plans, isLoading: plansLoading } = usePlans();
   const {
-    subscriptionStatus,
+    paymentMethods,
+    loading: paymentMethodsLoading,
+    refetch: refetchPaymentMethods,
+  } = usePaymentMethods();
+  const {
+    subscription,
     currentPlan,
     showExpiredMessage,
-    setSubscriptionStatus,
+    setSubscription,
     setCurrentPlan,
   } = useSubscriptionStore();
-
   const [loading, setLoading] = useState<string>("");
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [showPaymentMethodDialog, setShowPaymentMethodDialog] = useState(false);
+  const [savePaymentMethod, setSavePaymentMethod] = useState(true);
+  const [selectedPlanType, setSelectedPlanType] = useState<string>("");
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] =
+    useState<string>("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,6 +82,16 @@ export default function PricingPage() {
     fetchUserAndSubscription();
   }, [user?.id]);
 
+  // Set default payment method when payment methods are loaded
+  useEffect(() => {
+    if (paymentMethods.length > 0 && !selectedPaymentMethodId) {
+      const defaultMethod = paymentMethods.find((pm) => pm.isDefault);
+      if (defaultMethod) {
+        setSelectedPaymentMethodId(defaultMethod.id);
+      }
+    }
+  }, [paymentMethods]);
+
   const fetchUserAndSubscription = async () => {
     if (!user?.id) {
       console.error("No user found");
@@ -69,11 +100,14 @@ export default function PricingPage() {
     }
 
     try {
-      const res = await fetch(`/api/subscription/status?userId=${user.id}`);
-      const { success, data } = await res.json();
+      const res = await apiCall(
+        `/api/subscription/status?userId=${user.id}`,
+        "GET"
+      );
+      const { success, data } = res;
 
       if (success && data) {
-        setSubscriptionStatus(data);
+        setSubscription(data);
       } else {
         setCurrentPlan("");
       }
@@ -96,13 +130,27 @@ export default function PricingPage() {
       return;
     }
 
+    // Store selected plan type
+    setSelectedPlanType(planType);
+
+    // Show payment method selection dialog if user has saved payment methods
+    if (paymentMethods.length > 0) {
+      setShowPaymentMethodDialog(true);
+    } else {
+      // Proceed directly to payment
+      await proceedToPayment(planType);
+    }
+  };
+
+  const proceedToPayment = async (planType: string) => {
     setLoading(planType);
+    setShowPaymentMethodDialog(false);
 
     try {
       // Create order
       const orderResponse = await apiCall("/api/payments/create", "POST", {
-        planType,
-        userId: user?.id,
+        subscriptionId: subscription?.subscription?.id || null,
+        tierId: plans?.find((p) => p.type === planType)?.id,
       });
 
       if (!orderResponse.success) {
@@ -110,11 +158,13 @@ export default function PricingPage() {
       }
 
       const options: RazorpayOptions = {
-        key: orderResponse.data.key,
+        key: orderResponse.data.keyId,
         amount: orderResponse.data.amount,
         currency: orderResponse.data.currency,
         name: "My Eternal Guide",
-        description: `${orderResponse.data.planName} Subscription`,
+        description: `${
+          plans?.find((p) => p.type === planType)?.name
+        } Subscription`,
         image:
           "https://myeternalguide.com/wp-content/uploads/2025/10/MEG-Logo-New-Tagline_286x54.png",
         order_id: orderResponse.data.orderId,
@@ -128,10 +178,12 @@ export default function PricingPage() {
               "/api/payments/verify",
               "POST",
               {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                userId: user?.id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                subscriptionId: orderResponse.data.subscriptionId,
+                savePaymentMethod: savePaymentMethod,
+                paymentMethodNickname: undefined, // Can be added to dialog
               }
             );
 
@@ -145,12 +197,17 @@ export default function PricingPage() {
             setCurrentPlan(planType);
             await fetchUserAndSubscription();
 
+            // Refetch payment methods if we saved a new one
+            if (savePaymentMethod) {
+              await refetchPaymentMethods();
+            }
+
             toast.success(
-              `🎉 Payment Successful!\n\nYou are now subscribed to the ${orderResponse.data.planName}`
+              `🎉 Payment Successful!\n\nYou are now subscribed to the ${
+                plans?.find((p) => p.type === planType)?.name
+              }`
             );
             await fetchSubscription();
-
-            // Refresh subscription status
 
             // Redirect to dashboard
             setTimeout(() => {
@@ -190,7 +247,7 @@ export default function PricingPage() {
     } catch (error) {
       console.error("Subscribe error:", error);
       toast.error(
-        `Subscription Failed\n\n${
+        `Subscription Failed\n\n - \n\n${
           error instanceof Error ? error.message : "Please try again later"
         }`
       );
@@ -208,7 +265,7 @@ export default function PricingPage() {
       }}
     >
       <div className="mx-auto">
-        {!subscriptionStatus?.hasActiveSubscription && showExpiredMessage && (
+        {!subscription?.hasActiveSubscription && showExpiredMessage && (
           <div className="absolute w-full left-0 top-0 bg-red-100 dark:bg-red-900 dark:text-white text-red-800 px-4 py-2 text-sm font-medium">
             <span className="flex items-center justify-center">
               Your subscription has expired, or your request limit has been
@@ -259,6 +316,131 @@ export default function PricingPage() {
           </p>
         </div>
       </div>
+
+      {/* Payment Method Selection Dialog */}
+      <Dialog
+        open={showPaymentMethodDialog}
+        onOpenChange={setShowPaymentMethodDialog}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Choose Payment Method</DialogTitle>
+            <DialogDescription>
+              Select a saved payment method or add a new one
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {paymentMethodsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+              </div>
+            ) : paymentMethods.length > 0 ? (
+              <>
+                {/* Saved Payment Methods */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Saved Payment Methods
+                  </Label>
+                  <div className="space-y-2">
+                    {paymentMethods.map((method) => (
+                      <div
+                        key={method.id}
+                        onClick={() => setSelectedPaymentMethodId(method.id)}
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedPaymentMethodId === method.id
+                            ? "border-purple-600 bg-purple-50"
+                            : "border-gray-200 hover:border-purple-300"
+                        }`}
+                      >
+                        <CreditCard
+                          className={`w-5 h-5 ${
+                            selectedPaymentMethodId === method.id
+                              ? "text-purple-600"
+                              : "text-gray-400"
+                          }`}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            {method.displayInfo}
+                          </p>
+                          {method.nickname && (
+                            <p className="text-xs text-gray-500">
+                              {method.nickname}
+                            </p>
+                          )}
+                        </div>
+                        {method.isDefault && (
+                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add New Payment Method Option */}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSelectedPaymentMethodId("");
+                    proceedToPayment(selectedPlanType);
+                  }}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Use Different Payment Method
+                </Button>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500 mb-4">No saved payment methods</p>
+                <Button onClick={() => proceedToPayment(selectedPlanType)}>
+                  Add Payment Method
+                </Button>
+              </div>
+            )}
+
+            {/* Save Payment Method Checkbox */}
+            <div className="flex items-center space-x-2 pt-4 border-t">
+              <Checkbox
+                id="savePaymentMethod"
+                checked={savePaymentMethod}
+                onCheckedChange={(checked) =>
+                  setSavePaymentMethod(checked as boolean)
+                }
+              />
+              <Label
+                htmlFor="savePaymentMethod"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Save this payment method for future purchases
+              </Label>
+            </div>
+
+            {/* Action Buttons */}
+            {selectedPaymentMethodId && (
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPaymentMethodDialog(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => proceedToPayment(selectedPlanType)}
+                  className="flex-1"
+                  style={{ backgroundColor: PRIMARY_COLOR }}
+                >
+                  Continue to Payment
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
