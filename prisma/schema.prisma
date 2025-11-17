@@ -42,11 +42,12 @@ model User {
   requestsUsedLifetime Int     @default(0) @map("requests_used_lifetime")
 
   // Relations
-  Thread       Thread[]
-  userMemory   UserMemory?
-  payments     Payment[]
-  Subscription Subscription[]
-  OtpCode      OtpCode[]
+  Thread         Thread[]
+  userMemory     UserMemory?
+  payments       Payment[]
+  Subscription   Subscription[]
+  OtpCode        OtpCode[]
+  paymentMethods PaymentMethod[]
 
   @@index([email])
   @@index([activeSubscriptionId])
@@ -104,6 +105,7 @@ model Payment {
   id                String        @id @default(cuid())
   userId            String        @map("user_id")
   subscriptionId    String        @map("subscription_id")
+  paymentMethodId   String?       @map("payment_method_id")
   razorpayPaymentId String?       @unique @map("razorpay_payment_id")
   razorpayOrderId   String?       @map("razorpay_order_id")
   razorpaySignature String?       @map("razorpay_signature")
@@ -116,14 +118,52 @@ model Payment {
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription  Subscription   @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([subscriptionId])
+  @@index([paymentMethodId])
   @@index([status])
   @@index([razorpayPaymentId])
   @@map("payments")
+}
+
+model PaymentMethod {
+  id     String            @id @default(cuid())
+  userId String            @map("user_id")
+  type   PaymentMethodType // card, upi, wallet, netbanking etc.
+
+  cardType        String? @map("card_type") // credit, debit, prepaid
+  cardNetwork     String? @map("card_network") // Visa, Mastercard, RuPay, etc.
+  cardLast4       String? @map("card_last4") // Last 4 digits
+  cardIssuer      String? @map("card_issuer") // Bank name
+  cardName        String? @map("card_name") // Name on card (if available)
+  cardExpMonth    String? @map("card_exp_month") // Expiry month (MM)
+  cardExpYear     String? @map("card_exp_year") // Expiry year (YYYY)
+  cardTokenId     String? @unique @map("card_token_id") // Razorpay token ID for saved card
+  cardFingerPrint String? @map("card_finger_print") // Unique identifier for card
+
+  upiVpa String? @map("upi_vpa") // UPI ID (e.g., user@bank)
+
+  bankName String? @map("bank_name")
+
+  walletName String? @map("wallet_name") // Paytm, PhonePe, etc.
+
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true) @map("is_active")
+  nickname  String? // User-friendly name for the payment method
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([cardTokenId])
+  @@map("payment_methods")
 }
 
 model UserMemory {
@@ -177,4 +217,11 @@ enum PaymentStatus {
   CAPTURED
   REFUNDED
   FAILED
+}
+
+enum PaymentMethodType {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
 }
