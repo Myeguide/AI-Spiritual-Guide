@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-    createRazorpayOrder,
-    generateReceiptId
-} from '@/lib/services/razorpay';
-import {
-    RAZORPAY_CONFIG
-} from '@/lib/config/payment.config';
-import {
-    PlanType,
-    PaymentError,
-    DatabaseError
-} from '@/types/payment';
-import { getPlanByType } from '@/lib/rate-limiter';
-import { SubscriptionService } from '@/lib/services/subscription.service';
-import { PaymentService } from '@/lib/services/payment.service';
+import { createRazorpayOrder } from '@/lib/services/razorpay';
+import { ApiResponse, RazorpayError } from '@/types/payment';
+import { verifyToken } from '@/lib/generate-token';
+import { prisma } from '@/lib/prisma';
 
 /**
  * POST /api/payments/create-order
@@ -21,119 +10,146 @@ import { PaymentService } from '@/lib/services/payment.service';
  */
 export async function POST(req: NextRequest) {
     try {
+        const authHeader = req.headers.get("authorization");
+        const token = authHeader?.split(" ")[1];
+
+        if (!token) {
+            return NextResponse.json(
+                { error: "Unauthorized - No token provided" },
+                { status: 401 }
+            );
+        }
+
+        const verified = verifyToken(token);
+        if (!verified) {
+            return NextResponse.json(
+                { error: "Invalid or expired token" },
+                { status: 401 }
+            )
+        }
+        const userId = verified.userId;
+        if (!userId) {
+            return NextResponse.json(
+                { error: "Unauthorized - Invalid token" },
+                { status: 401 }
+            );
+        }
+
         // Parse request body
         const body = await req.json();
-        const { planType, userId } = body;
+        const { subscriptionId, tierId } = body;
 
-        // Validate required fields
-        if (!planType || !userId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Missing required fields: planType and userId'
-                },
+        if (!subscriptionId && !tierId) {
+            return NextResponse.json<ApiResponse>(
+                { success: false, error: 'Subscription ID or Tier ID is required' },
                 { status: 400 }
             );
         }
 
+        let subscription: any;
+        let tier: any;
 
-        // Validate userId is a string (cuid)
-        if (typeof userId !== 'string' || !userId.trim()) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Invalid userId. Must be a valid string'
-                },
-                { status: 400 }
-            );
+        // If subscription exists, fetch it
+        // If subscription exists, fetch it
+        if (subscriptionId) {
+            subscription = await prisma.subscription.findUnique({
+                where: { id: subscriptionId },
+                include: { tier: true },
+            });
+
+            if (!subscription || subscription.userId !== userId) {
+                return NextResponse.json<ApiResponse>(
+                    { success: false, error: 'Subscription not found' },
+                    { status: 404 }
+                );
+            }
+
+            // If upgrading (tierId is also provided)
+            if (tierId && tierId !== subscription.tierId) {
+                // Fetch the new tier
+                const newTier = await prisma.subscriptionTier.findUnique({
+                    where: { id: tierId },
+                });
+
+                if (!newTier) {
+                    return NextResponse.json<ApiResponse>(
+                        { success: false, error: 'New subscription tier not found' },
+                        { status: 404 }
+                    );
+                }
+
+                // Create new paid subscription
+                subscription = await prisma.subscription.create({
+                    data: {
+                        userId: userId,
+                        tierId: newTier.id,
+                        planType: newTier.type,
+                        amount: newTier.price,
+                        currency: newTier.currency,
+                        totalRequests: newTier.totalRequests,
+                        status: 'PENDING',
+                    },
+                });
+
+                tier = newTier;
+            } else {
+                // Just using existing subscription
+                tier = subscription.tier;
+            }
         }
-
-        const plan = await getPlanByType(planType);
-        if (!plan) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Plan not found'
-                },
-                { status: 404 }
-            );
-        }
-
-        // Create subscription record in database (status: pending)
-        const subscription = await SubscriptionService.createSubscription(plan, userId);
-
-        // Generate receipt ID
-        const receiptId = generateReceiptId(userId, planType as PlanType);
 
         // Create Razorpay order
-        const order = await createRazorpayOrder(
-            plan.price,
-            plan.currency,
-            receiptId,
-            {
-                userId: userId,
-                subscriptionId: subscription.id,
-                planType: planType,
-                planName: plan.name,
-            }
-        );
-
-        // Create payment record in database
-        await PaymentService.createPayment({
-            userId: userId,
+        const order = await createRazorpayOrder({
+            amount: tier.price,
+            currency: tier.currency,
             subscriptionId: subscription.id,
-            razorpayOrderId: order.id,
-            amount: plan.price,
-            currency: plan.currency,
-            description: `Payment for ${plan.name}`,
+            userId: userId,
             notes: {
-                planType: planType,
-                subscriptionId: subscription.id,
+                tierName: tier.name,
+                planType: tier.type,
             },
         });
 
-        // Return order details to frontend
-        return NextResponse.json({
+        // Create payment record
+        const payment = await prisma.payment.create({
+            data: {
+                userId: userId,
+                subscriptionId: subscription.id,
+                razorpayOrderId: order.id,
+                amount: tier.price,
+                currency: tier.currency,
+                status: 'CREATED',
+                description: `Payment for ${tier.name} subscription`,
+                notes: {
+                    orderId: order.id,
+                    tierName: tier.name,
+                },
+            },
+        });
+
+        return NextResponse.json<ApiResponse>({
             success: true,
             data: {
                 orderId: order.id,
                 amount: order.amount,
                 currency: order.currency,
-                key: RAZORPAY_CONFIG.key_id,
                 subscriptionId: subscription.id,
-                planName: plan.name,
-                receipt: receiptId,
+                paymentId: payment.id,
+                keyId: process.env.RAZORPAY_KEY_ID,
             },
         });
+    } catch (error: any) {
+        console.error('POST /api/payments/create error:', error);
 
-    } catch (error) {
-        console.error('Create order error:', error);
-
-        if (error instanceof PaymentError) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: error.message
-                },
+        if (error instanceof RazorpayError) {
+            return NextResponse.json<ApiResponse>(
+                { success: false, error: error.message },
                 { status: error.statusCode }
             );
         }
 
-        if (error instanceof DatabaseError) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: 'Database error occurred. Please try again.'
-                },
-                { status: 500 }
-            );
-        }
-
-        return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to create order. Please try again.'
-            },
+        return NextResponse.json<ApiResponse>(
+            { success: false, error: 'Failed to create payment order' },
             { status: 500 }
         );
     }

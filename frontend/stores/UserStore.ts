@@ -1,7 +1,7 @@
 // store/userStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@/types/user";
+import type { LoggedInUser } from "@/types/user";
 import { clearAllUserData } from "../dexie/queries";
 
 interface SubscriptionInfo {
@@ -10,13 +10,14 @@ interface SubscriptionInfo {
 }
 
 interface IAuth {
-    user: User | null;
+    user: LoggedInUser | null;
     currentUserId: string | null;
     loading: boolean;
     token: string | null;
     subscription: SubscriptionInfo;
 
-    setUser: (user: User) => void;
+    setUser: (user: LoggedInUser) => void;
+    updateUser: (udpates: Partial<LoggedInUser>) => void;
     setLoading: (loading: boolean) => void;
     setToken: (token: string | null) => void;
     setSubscription: (subscription: Partial<SubscriptionInfo>) => void;
@@ -38,7 +39,7 @@ export const useUserStore = create<IAuth>()(
                 expiresAt: null,
             },
 
-            setUser: (user: User) => {
+            setUser: (user: LoggedInUser) => {
                 const previousUserId = get().currentUserId;
                 const newUserId = user.id;
 
@@ -49,6 +50,10 @@ export const useUserStore = create<IAuth>()(
                 }
                 set({ user, currentUserId: newUserId });
             },
+            updateUser: (updates: Partial<LoggedInUser>) =>
+                set((state) => ({
+                    user: state.user ? { ...state.user, ...updates } : null,
+                })),
             setLoading: (loading) => set({ loading }),
             setToken: (token) => set({ token }),
 
@@ -69,7 +74,6 @@ export const useUserStore = create<IAuth>()(
                     });
 
                     const data = await response.json();
-                    console.log(data);
                     if (data.success) {
                         set({
                             subscription: {

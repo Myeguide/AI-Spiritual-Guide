@@ -1,29 +1,31 @@
 import { create } from 'zustand';
-import { SubscriptionStatus } from '@/types/plan';
+import { Subscription } from '@/types/plan';
 
 interface SubscriptionState {
-    subscriptionStatus: SubscriptionStatus | null;
+    subscription: Subscription | null;
     currentPlan: string;
     showExpiredMessage: boolean;
 
     // Actions
-    setSubscriptionStatus: (status: SubscriptionStatus | null) => void;
+    setSubscription: (subs: Subscription | null) => void;
     setCurrentPlan: (plan: string) => void;
     setShowExpiredMessage: (show: boolean) => void;
     clearSubscription: () => void;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
-    subscriptionStatus: null,
+    subscription: null,
     currentPlan: '',
     showExpiredMessage: false,
 
-    setSubscriptionStatus: (status) => {
-        set({ subscriptionStatus: status });
-        if (status) {
+    setSubscription: (subs) => {
+        set({
+            subscription: subs
+        });
+        if (subs) {
             set({
-                currentPlan: status.subscription?.planType || '',
-                showExpiredMessage: status.hasActiveSubscription === false
+                currentPlan: subs?.subscription?.planType || '',
+                showExpiredMessage: subs?.hasActiveSubscription === false
             });
         }
     },
@@ -36,7 +38,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
 
     clearSubscription: () =>
         set({
-            subscriptionStatus: null,
+            subscription: null,
             currentPlan: '',
             showExpiredMessage: false
         }),
