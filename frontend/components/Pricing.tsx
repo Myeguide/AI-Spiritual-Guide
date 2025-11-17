@@ -310,9 +310,12 @@ export default function PricingPage() {
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Need help choosing?{" "}
-            {/* <a href="/contact" className="text-purple-600 underline">
+            <a
+              href="mailto:support@Myeternalguide.com?subject=Support Request&body=Hello, I need help with..."
+              className="text-purple-600 underline"
+            >
               Contact us
-            </a> */}
+            </a>
           </p>
         </div>
       </div>
