@@ -144,7 +144,7 @@ const PureFooter = () => {
             <Button variant="outline">Login</Button>
           </DialogTrigger>
           <DialogTitle />
-          <DialogContent className="p-0">
+          <DialogContent className="p-0 max-h-[80vh] overflow-y-auto no-scrollbar">
             <AuthForm />
           </DialogContent>
         </Dialog>

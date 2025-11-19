@@ -20,6 +20,7 @@ import {
 import { useUserStore } from "../stores/UserStore";
 import { apiCall } from "@/utils/api-call";
 import { LoaderCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const FormSchema = z.object({
   pin: z
@@ -35,7 +36,7 @@ export default function InputOTPForm({
   email,
   password,
   onVerified,
-  dob
+  dob,
 }: {
   phoneNumber: string;
   firstName?: string;
@@ -47,10 +48,25 @@ export default function InputOTPForm({
   onVerified: () => void;
 }) {
   const { setUser, setToken, setLoading, loading } = useUserStore();
+  const [resendLoading, setResendLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: { pin: "" },
   });
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  // Initialize countdown on mount (5 minutes = 300 seconds)
+  useEffect(() => {
+    setCountdown(30);
+  }, []);
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     setLoading(true);
@@ -62,7 +78,7 @@ export default function InputOTPForm({
         lastName,
         email,
         password,
-        dob
+        dob,
       });
 
       if (response.success) {
@@ -80,6 +96,36 @@ export default function InputOTPForm({
       setLoading(false);
     }
   }
+
+  async function handleResendOTP() {
+    if (countdown > 0) return;
+
+    setResendLoading(true);
+    try {
+      const response = await apiCall("/api/resend-otp", "POST", {
+        phoneNumber,
+      });
+
+      if (response.success) {
+        toast.success("OTP has been resent successfully");
+        setCountdown(30); // Reset to 5 minutes
+        form.reset({ pin: "" }); // Clear the input
+      } else {
+        toast.error(response.error || "Failed to resend OTP");
+      }
+    } catch (error) {
+      console.error("Resend OTP error:", error);
+      toast.error("Something went wrong resending the OTP");
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   return (
     <Form {...form}>
@@ -105,16 +151,29 @@ export default function InputOTPForm({
                   </InputOTPGroup>
                 </InputOTP>
               </FormControl>
-              <FormDescription>
-                Enter the 6-digit OTP sent to your phone number.
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? <LoaderCircle className="animate-spin" /> : "Verify OTP"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handleResendOTP}
+          disabled={resendLoading || countdown > 0}
+        >
+          {resendLoading ? (
+            <LoaderCircle className="animate-spin" />
+          ) : countdown > 0 ? (
+            `Resend OTP in ${formatTime(countdown)}`
+          ) : (
+            "Resend OTP"
+          )}
         </Button>
       </form>
     </Form>
