@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OTPService } from "@/lib/services/otp.service";
+import { OTPError, OTPService } from "@/lib/services/otp.service";
 import { UserService } from "@/lib/services/user.service";
 import { registerSchema } from "@/lib/validators/auth.validator";
 import { cookies } from "next/headers";
@@ -12,24 +12,28 @@ import { calculateAge } from "@/utils/date-utils";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-
-        // 🧩 Validate input with Zod
         const validatedData = registerSchema.parse(body);
         const { phoneNumber, code, firstName, lastName, email, password, dob } = validatedData;
 
         // 🔐 Verify OTP
-        const isValid = await OTPService.verifyOTP(phoneNumber, code);
-        const salt = genSaltSync(10);
-        const hashedPassword = hashSync(password, salt);
-
-        if (!isValid) {
+        try {
+            await OTPService.verifyOTP(phoneNumber, code);
+        } catch (error) {
+            if (error instanceof OTPError) {
+                return NextResponse.json(
+                    { success: false, error: error.message },
+                    { status: error.statusCode }
+                );
+            }
             return NextResponse.json(
                 { success: false, error: "Invalid or expired OTP" },
                 { status: 401 }
             );
         }
 
-        // 🔍 Check if user already exists
+        const salt = genSaltSync(10);
+        const hashedPassword = hashSync(password, salt);
+
         let user = await UserService.getUserByPhoneOrEmail(phoneNumber, email);
         if (user) {
             return NextResponse.json(
@@ -40,6 +44,7 @@ export async function POST(req: NextRequest) {
                 { status: 409 }
             );
         }
+
         const age = calculateAge(dob);
 
         try {
@@ -68,10 +73,8 @@ export async function POST(req: NextRequest) {
             throw error;
         }
 
-        // 🎟️ Generate session token
         const sessionToken = generateToken(user.id, user.age, phoneNumber);
 
-        // 🍪 Set session cookie
         const cookieStore = await cookies();
         cookieStore.set("session-token", sessionToken, {
             httpOnly: true,
@@ -104,9 +107,5 @@ export async function POST(req: NextRequest) {
             { success: false, error: "Internal server error" },
             { status: 500 }
         );
-    } finally {
-        if (process.env.NODE_ENV === "production") {
-            await prisma.$disconnect().catch(() => { });
-        }
     }
 }
