@@ -88,11 +88,12 @@ export default function AuthForm() {
 
         return;
       } else {
+        console.log("Login error response:", response);
         //error should be thrown be using  frontend but from backend it should come
-        toast.error("No account found with this phone number");
+        toast.error(response.error||"Something went wrong during login" );
       }
     } catch (error) {
-      console.error(error);
+    console.error(error);
       toast.error("Login failed. Please try again.");
     } finally {
       setLoading(false);
