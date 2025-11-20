@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/generate-token";
 import { UserService } from "@/lib/services/user.service";
+import { AuthMiddleware } from "@/app/middleware/middleware";
 
 /*
  * POST /api/messages
@@ -9,30 +9,12 @@ import { UserService } from "@/lib/services/user.service";
 */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         // Get user with active subscription
         const user = await UserService.getUserById(userId);
@@ -161,30 +143,12 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         // Get user with active subscription
         const user = await UserService.getUserById(userId);

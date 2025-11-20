@@ -1,35 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, RazorpayError } from '@/types/payment';
 import { fetchRazorpayPayment, savePaymentMethodFromPayment, verifyPaymentSignature } from '@/lib/services/razorpay';
-import { verifyToken } from '@/lib/generate-token';
 import { prisma } from '@/lib/prisma';
+import { AuthMiddleware } from '@/app/middleware/middleware';
 
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
+        const { userId } = auth;
 
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
         // Parse and validate request body
         const body = await req.json();
         const {
@@ -87,7 +70,7 @@ export async function POST(req: NextRequest) {
             );
         }
         // Update payment record
-        await prisma.payment.update({
+        const updatedPayment = await prisma.payment.update({
             where: { id: payment.id },
             data: {
                 razorpayPaymentId,
@@ -103,6 +86,8 @@ export async function POST(req: NextRequest) {
                         vpa: paymentDetails.vpa,
                         cardLast4: paymentDetails.card?.last4,
                         cardNetwork: paymentDetails.card?.network,
+                        token_id: paymentDetails.token_id,
+                        customerId: paymentDetails.customer_id,
                     },
                 },
             },
@@ -143,8 +128,8 @@ export async function POST(req: NextRequest) {
         });
 
         // Save payment method if requested
-        let savedPaymentMethod: { id: string; type: string } | null = null;
-        if (savePaymentMethod) {
+        let savedPaymentMethod: { id: string; type: string, cardLast4: string, cardTokenId: string } | null = null;
+        if (savePaymentMethod && paymentDetails.method === 'card') {
             try {
                 savedPaymentMethod = await savePaymentMethodFromPayment(
                     userId,
@@ -163,13 +148,15 @@ export async function POST(req: NextRequest) {
                 subscription: updatedSubscription,
                 payment: {
                     id: payment.id,
-                    status: 'CAPTURED',
+                    status: updatedPayment.status,
                     method: paymentDetails.method,
                 },
                 savedPaymentMethod: savedPaymentMethod
                     ? {
                         id: savedPaymentMethod.id,
                         type: savedPaymentMethod.type,
+                        cardLast4: savedPaymentMethod.cardLast4,
+                        hasToken: !!savedPaymentMethod.cardTokenId,
                     }
                     : null,
             },

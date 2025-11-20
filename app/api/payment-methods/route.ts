@@ -5,7 +5,7 @@ import {
     ApiResponse,
     PaymentMethodError,
 } from '@/types/payment';
-import { verifyToken } from '@/lib/generate-token';
+import { AuthMiddleware } from '@/app/middleware/middleware';
 
 /**
  * GET /api/payment-methods
@@ -13,30 +13,12 @@ import { verifyToken } from '@/lib/generate-token';
  */
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         const paymentMethods = await PaymentService.getUserPaymentMethods(userId);
         console.log('Payment Methods:', paymentMethods);
@@ -69,31 +51,13 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
-
+        const { userId } = auth;
+        
         const body = await req.json();
         const data: CreatePaymentMethodDTO = body;
 

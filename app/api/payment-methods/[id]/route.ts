@@ -1,4 +1,4 @@
-import { verifyToken } from "@/lib/generate-token";
+import { AuthMiddleware } from "@/app/middleware/middleware";
 import { PaymentService } from "@/lib/services/payment.service";
 import { ApiResponse, PaymentMethodError } from "@/types/payment";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,31 +14,12 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
-
+        const { userId } = auth;
 
         const paymentMethod = await PaymentService.getPaymentMethod(params.id, userId);
 
@@ -72,30 +53,12 @@ export async function PATCH(
     { params }: { params: { id: string } }
 ) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         const body = await req.json();
 
@@ -132,31 +95,12 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
-
+        const { userId } = auth;
 
         await PaymentService.deletePaymentMethod(params.id, userId);
 
