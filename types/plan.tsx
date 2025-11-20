@@ -79,6 +79,8 @@ export interface RazorpayOptions {
   description: string;
   image: string;
   order_id: string;
+  tokenId?: string;
+  customerId?: string;
   handler: (response: {
     razorpay_order_id: string;
     razorpay_payment_id: string;
