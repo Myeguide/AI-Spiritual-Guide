@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const auth = AuthMiddleware(req);
@@ -20,7 +20,11 @@ export async function POST(
         }
         const { userId } = auth;
 
-        const paymentMethod = await PaymentService.setDefaultPaymentMethod(params.id, userId);
+        // ✅ ADD THIS LINE - await params first
+        const { id } = await params;
+
+        // ✅ CHANGE THIS LINE - use `id` instead of `params.id`
+        const paymentMethod = await PaymentService.setDefaultPaymentMethod(id, userId);
 
         return NextResponse.json<ApiResponse>({
             success: true,
