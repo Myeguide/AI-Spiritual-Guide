@@ -1,4 +1,4 @@
-import { verifyToken } from "@/lib/generate-token";
+import { AuthMiddleware } from "@/app/middleware/middleware";
 import { PaymentService } from "@/lib/services/payment.service";
 import { savePaymentMethodFromPayment } from "@/lib/services/razorpay";
 import { ApiResponse, PaymentMethodError } from "@/types/payment";
@@ -10,30 +10,12 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         const body = await req.json();
         const { razorpayPaymentId, nickname } = body;

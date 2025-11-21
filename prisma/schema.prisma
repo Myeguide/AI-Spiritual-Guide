@@ -144,6 +144,7 @@ model PaymentMethod {
   cardExpYear     String? @map("card_exp_year") // Expiry year (YYYY)
   cardTokenId     String? @unique @map("card_token_id") // Razorpay token ID for saved card
   cardFingerPrint String? @map("card_finger_print") // Unique identifier for card
+  customerId      String? @map("customer_id")
 
   upiVpa String? @map("upi_vpa") // UPI ID (e.g., user@bank)
 
@@ -163,6 +164,7 @@ model PaymentMethod {
   @@index([userId])
   @@index([userId, isDefault])
   @@index([cardTokenId])
+  @@index([customerId])
   @@map("payment_methods")
 }
 

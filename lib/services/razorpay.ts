@@ -6,6 +6,7 @@ import {
     PaymentError,
     RazorpayOrder,
     PlanType,
+    RazorpayOrderOptions,
     RazorpayPaymentDetails,
     RazorpayOrderResponse,
     CreateRazorpayOrderDTO,
@@ -36,8 +37,9 @@ function getRazorpayInstance(): Razorpay {
  * Create a Razorpay order for payment
  */
 export async function createRazorpayOrder(
-    data: CreateRazorpayOrderDTO
-): Promise<RazorpayOrderResponse> {
+    data: CreateRazorpayOrderDTO,
+    customerId?: string,
+): Promise<RazorpayOrderResponse & { customer_id?: string }> {
     try {
         const razorpay = getRazorpayInstance();
         const numeric = Number(String(data.amount).replace(/[^0-9.-]+/g, ''));
@@ -46,7 +48,7 @@ export async function createRazorpayOrder(
         }
         const amountInPaise = Math.round(numeric * 100); // integer paise
 
-        const orderOptions = {
+        const orderOptions: RazorpayOrderOptions = {
             amount: amountInPaise,
             currency: data.currency,
             receipt: `order_${Date.now()}`,
@@ -56,10 +58,18 @@ export async function createRazorpayOrder(
                 ...data.notes,
             },
         };
-        console.log("Razorpay Order Options:", orderOptions);
+
+        if (customerId) {
+            orderOptions.customer_id = customerId;
+            console.log('💳 Order will use customer_id for saved cards:', customerId);
+        }
 
         const order = await razorpay.orders.create(orderOptions);
-        return order as RazorpayOrderResponse;
+
+        return {
+            ...(order as RazorpayOrderResponse),
+            customer_id: customerId,
+        };
     }
 
     catch (error: any) {
@@ -232,11 +242,16 @@ export async function savePaymentMethodFromPayment(
         );
 
         if (existingMethod) {
-            // Update existing method's last used date
-            return await prisma.paymentMethod.update({
-                where: { id: existingMethod.id },
-                data: { updatedAt: new Date() },
-            });
+            if (paymentMethodData.cardTokenId && payment.token_id) {
+                return await prisma.paymentMethod.update({
+                    where: { id: existingMethod.id },
+                    data: {
+                        cardTokenId: payment.token_id,
+                        updatedAt: new Date(),
+                    },
+                });
+            }
+            return existingMethod;
         }
 
         // Check if this should be the default (first payment method)
@@ -244,7 +259,7 @@ export async function savePaymentMethodFromPayment(
             where: { userId, isActive: true },
         });
 
-        const isDefault = existingMethods === 0 || paymentMethodData.isDefault;
+        const isDefault = existingMethods === 0;
 
         // If setting as default, unset other defaults
         if (isDefault) {
@@ -361,6 +376,269 @@ export async function refundPayment(
         );
     }
 }
+
+/**
+   * Get card token for prefilling in Razorpay
+   */
+export async function getCardToken(userId: string, paymentMethodId: string): Promise<string | null> {
+    try {
+        const paymentMethod = await prisma.paymentMethod.findFirst({
+            where: {
+                id: paymentMethodId,
+                userId,
+                isActive: true,
+                type: PaymentMethodType.CARD,
+            },
+            select: {
+                cardTokenId: true,
+                cardLast4: true,
+                cardNetwork: true,
+            },
+        });
+
+        if (!paymentMethod || !paymentMethod.cardTokenId) {
+            return null;
+        }
+
+        return paymentMethod.cardTokenId;
+    } catch (error: any) {
+        console.error('Error getting card token:', error);
+        return null;
+    }
+}
+
+/**
+   * Create or fetch customer for token payments
+   */
+export async function createOrGetCustomer(user: any): Promise<any> {
+    try {
+        const existingCustomer = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+            }
+        });
+        if (!existingCustomer) {
+            throw new Error('User not found');
+        }
+
+        let customerId = (user as any).razorpayCustomerId;
+        if (!customerId) {
+            console.log('📋 Creating new Razorpay customer...');
+
+            // Create customer in Razorpay
+            const razorpay = getRazorpayInstance();
+            const customer = await razorpay.customers.create({
+                email: existingCustomer.email,
+                contact: user.phoneNumber || '',
+                name: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
+                notes: {
+                    userId: user.id,
+                },
+            });
+
+            customerId = customer.id;
+
+            console.log('✅ Razorpay customer created:', {
+                customerId,
+                email: existingCustomer.email,
+                name: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
+            });
+
+            // Save customer ID to database if your schema supports it
+            // For now, we'll store it in a separate table
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    // If you add razorpayCustomerId field to User model, use it
+                    // razorpayCustomerId: customerId,
+                },
+            });
+
+            // Alternative: Store in a custom table
+            // await prisma.razorpayCustomer.upsert({...})
+        } else {
+            console.log('✅ Using existing Razorpay customer:', customerId);
+        }
+
+        return { customerId, email: existingCustomer.email };
+    } catch (error: any) {
+        console.error('❌ Error creating/getting customer:', error);
+        throw new RazorpayError(
+            error.message || 'Failed to create customer',
+            'CUSTOMER_CREATION_FAILED',
+            500
+        );
+    }
+}
+
+/**
+   * Create a payment with saved card token
+   */
+export async function createPaymentWithToken(
+    customerId: string,
+    tokenId: string,
+    orderId: string,
+    amount: number,
+    currency: string = 'INR'
+) {
+    try {
+        const options = {
+            customer_id: customerId,
+            token: tokenId,
+            recurring: 'initial',
+            amount,
+            currency,
+            order_id: orderId,
+            email: 'customer@example.com', // This should come from user
+            contact: 'customer_phone', // This should come from user
+        };
+        const razorpay = getRazorpayInstance();
+        // Cast to any to satisfy TypeScript signature for createPaymentJson when using token-based S2S params
+        const payment = await razorpay.payments.createPaymentJson(options as any);
+        return payment;
+    } catch (error: any) {
+        throw new RazorpayError(
+            error.message || 'Failed to create payment with token',
+            'PAYMENT_CREATION_FAILED',
+            500
+        );
+    }
+}
+
+
+/**
+   * Extract and save payment token from payment response
+   */
+export async function saveCardToken(
+    userId: string,
+    paymentId: string,
+    nickname?: string
+): Promise<any> {
+    try {
+        const payment = await fetchRazorpayPayment(paymentId);
+
+        if (!payment.card) {
+            throw new PaymentMethodError(
+                'No card details found in payment',
+                'NO_CARD_DETAILS',
+                400
+            );
+        }
+
+        // Razorpay returns token_id for saved cards
+        const tokenId = payment.token_id;
+        if (!tokenId) {
+            throw new PaymentMethodError(
+                'No token ID in payment response',
+                'NO_TOKEN_ID',
+                400
+            );
+        }
+
+        const [expMonth, expYear] = payment.card.id.split('_').slice(-2) || [
+            '',
+            '',
+        ];
+
+        const paymentMethodData: CreatePaymentMethodDTO = {
+            type: PaymentMethodType.CARD,
+            cardType: payment.card.type,
+            cardNetwork: payment.card.network,
+            cardLast4: payment.card.last4,
+            cardIssuer: payment.card.issuer || undefined,
+            cardName: payment.card.name || undefined,
+            cardTokenId: tokenId, // Store the token for future payments
+            cardFingerPrint: payment.card.id || undefined,
+            cardExpMonth: expMonth || undefined,
+            cardExpYear: expYear || undefined,
+            nickname: nickname || `${payment.card.network} •••• ${payment.card.last4}`,
+        };
+
+        // Check for duplicate
+        const existingMethod = await findDuplicatePaymentMethod(
+            userId,
+            paymentMethodData
+        );
+
+        if (existingMethod) {
+            // Update existing token if needed
+            return await prisma.paymentMethod.update({
+                where: { id: existingMethod.id },
+                data: {
+                    cardTokenId: tokenId,
+                    updatedAt: new Date(),
+                },
+            });
+        }
+
+        // Check if this should be default
+        const existingMethods = await prisma.paymentMethod.count({
+            where: { userId, isActive: true },
+        });
+
+        const isDefault = existingMethods === 0;
+
+        if (isDefault) {
+            await prisma.paymentMethod.updateMany({
+                where: { userId, isDefault: true },
+                data: { isDefault: false },
+            });
+        }
+
+        return await prisma.paymentMethod.create({
+            data: {
+                userId,
+                ...paymentMethodData,
+                isDefault,
+                isActive: true,
+            },
+        });
+    } catch (error: any) {
+        if (error instanceof PaymentMethodError || error instanceof RazorpayError) {
+            throw error;
+        }
+        throw new PaymentMethodError(
+            error.message || 'Failed to save card token',
+            'SAVE_TOKEN_FAILED',
+            500
+        );
+    }
+}
+
+/**
+   * Get customer ID for user (create if doesn't exist)
+   */
+export async function getOrCreateCustomerId(userId: string): Promise<string> {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phoneNumber: true,
+            },
+        });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Check if we have stored customer ID somewhere
+        // For now, we'll create a new one each time (Razorpay allows multiple)
+        const result = await createOrGetCustomer(user);
+        return result.customerId;
+    } catch (error: any) {
+        console.error('Error getting/creating customer:', error);
+        throw error;
+    }
+}
+
 
 // ============================================
 // HELPER FUNCTIONS
