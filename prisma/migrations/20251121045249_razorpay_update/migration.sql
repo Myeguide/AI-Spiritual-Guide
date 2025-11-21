@@ -4,6 +4,9 @@ CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIVE', 'CANCELLED', 'EXPIRED', 'PEN
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('CREATED', 'AUTHORIZED', 'CAPTURED', 'REFUNDED', 'FAILED');
 
+-- CreateEnum
+CREATE TYPE "PaymentMethodType" AS ENUM ('CARD', 'UPI', 'NETBANKING', 'WALLET');
+
 -- CreateTable
 CREATE TABLE "subscription_tiers" (
     "id" TEXT NOT NULL,
@@ -26,7 +29,9 @@ CREATE TABLE "users" (
     "last_name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "age" INTEGER,
+    "dob" TIMESTAMP(3),
     "phone_number" TEXT NOT NULL,
+    "password" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "active_subscription_id" TEXT,
@@ -73,6 +78,7 @@ CREATE TABLE "payments" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "subscription_id" TEXT NOT NULL,
+    "payment_method_id" TEXT,
     "razorpay_payment_id" TEXT,
     "razorpay_order_id" TEXT,
     "razorpay_signature" TEXT,
@@ -86,6 +92,33 @@ CREATE TABLE "payments" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_methods" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "type" "PaymentMethodType" NOT NULL,
+    "card_type" TEXT,
+    "card_network" TEXT,
+    "card_last4" TEXT,
+    "card_issuer" TEXT,
+    "card_name" TEXT,
+    "card_exp_month" TEXT,
+    "card_exp_year" TEXT,
+    "card_token_id" TEXT,
+    "card_finger_print" TEXT,
+    "customer_id" TEXT,
+    "upi_vpa" TEXT,
+    "bank_name" TEXT,
+    "wallet_name" TEXT,
+    "is_default" BOOLEAN NOT NULL DEFAULT false,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "nickname" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payment_methods_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -180,10 +213,28 @@ CREATE INDEX "payments_user_id_idx" ON "payments"("user_id");
 CREATE INDEX "payments_subscription_id_idx" ON "payments"("subscription_id");
 
 -- CreateIndex
+CREATE INDEX "payments_payment_method_id_idx" ON "payments"("payment_method_id");
+
+-- CreateIndex
 CREATE INDEX "payments_status_idx" ON "payments"("status");
 
 -- CreateIndex
 CREATE INDEX "payments_razorpay_payment_id_idx" ON "payments"("razorpay_payment_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_methods_card_token_id_key" ON "payment_methods"("card_token_id");
+
+-- CreateIndex
+CREATE INDEX "payment_methods_user_id_idx" ON "payment_methods"("user_id");
+
+-- CreateIndex
+CREATE INDEX "payment_methods_user_id_is_default_idx" ON "payment_methods"("user_id", "is_default");
+
+-- CreateIndex
+CREATE INDEX "payment_methods_card_token_id_idx" ON "payment_methods"("card_token_id");
+
+-- CreateIndex
+CREATE INDEX "payment_methods_customer_id_idx" ON "payment_methods"("customer_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserMemory_userId_key" ON "UserMemory"("userId");
@@ -204,16 +255,22 @@ CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_tier_id_fkey" FOREIGN KEY ("tier_id") REFERENCES "subscription_tiers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_tier_id_fkey" FOREIGN KEY ("tier_id") REFERENCES "subscription_tiers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "subscriptions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_payment_method_id_fkey" FOREIGN KEY ("payment_method_id") REFERENCES "payment_methods"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_methods_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
