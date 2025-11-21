@@ -20,13 +20,9 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-  const [rateLimitError, setRateLimitError] = useState<{
-    message: string;
-    details?: any;
-  } | null>(null);
-  
+
+
   // Use ref to prevent race conditions between onResponse and onError
-  const errorSetRef = useRef(false);
 
   const {
     isNavigatorVisible,
@@ -35,7 +31,12 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     registerRef,
   } = useChatNavigator();
 
-  const {
+  const errorSetRef = useRef<{
+    message: string;
+    details?: any;
+  } | null>(null);
+
+ const {
     messages,
     input,
     status,
@@ -44,16 +45,12 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     append,
     stop,
     reload,
-    error,
+    error, // Use this built-in error
   } = useChat({
     id: threadId,
     initialMessages,
     experimental_throttle: 50,
     onFinish: async (message) => {
-      // Clear error on successful completion
-      errorSetRef.current = false;
-      setRateLimitError(null);
-      
       const aiMessage: UIMessage = {
         id: message.id,
         parts: message.parts as UIMessage["parts"],
@@ -71,40 +68,29 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         console.error(error);
       }
     },
-    onResponse: async (response) => {
-      if (response.ok) {
-        setRateLimitError(null);
-      }
-      // That's it! Don't track status codes
-    },
-    
-    onError: (e) => {
-      let serverError = {
-        error: "Error",
-        message: "Something went wrong",
-      };
-      
-      try {
-        const parsed = JSON.parse(e.message);
-        serverError = {
-          error: parsed.error || "Error",
-          message: parsed.message || "Something went wrong",
-        };
-      } catch {
-        serverError.message = e.message;
-      }
-      
-      setRateLimitError({
-        message: serverError.error,
-        details: serverError.message,
-      });
-    },
     headers: {
       Authorization: `Bearer ${userConfig}`,
     },
   });
 
 
+  const rateLimitError = error ? (() => {
+    try {
+      const parsed = JSON.parse(error.message);
+      return {
+        message: parsed.error || "Error",
+        details: parsed.message || "Something went wrong",
+      };
+    } catch {
+      return {
+        message: "Error",
+        details: error.message,
+      };
+    }
+  })() : null;
+
+  console.log("error from useChat:", error);
+  console.log("parsed rateLimitError:", rateLimitError);
 
   return (
     <div className="relative w-full">
@@ -144,7 +130,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
             : "Show message navigator"
         }
       >
-        <Menu className="h-5 w-5"/>
+        <Menu className="h-5 w-5" />
       </Button>
 
       <ChatNavigator
