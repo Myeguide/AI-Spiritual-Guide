@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/generate-token";
+import { AuthMiddleware } from "@/app/middleware/middleware";
 
 /**
  * POST /api/threads
@@ -8,30 +8,12 @@ import { verifyToken } from "@/lib/generate-token";
  */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         const { threadId } = await req.json();
         const thread = await prisma.thread.create({
@@ -64,30 +46,12 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         // Optimized query with pagination and selective fields
         const { searchParams } = new URL(req.url);
@@ -151,30 +115,12 @@ export async function GET(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         const { searchParams } = new URL(req.url);
         const threadId = searchParams.get("threadId");
@@ -231,30 +177,13 @@ export async function DELETE(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1] as string;
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: 'Unauthorized - No token provided' },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
+        const { userId } = auth;
 
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid token' },
-                { status: 401 }
-            );
-        }
         const { threadId, title } = await req.json();
 
         if (!threadId || !title) {

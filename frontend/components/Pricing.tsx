@@ -134,23 +134,25 @@ export default function PricingPage() {
     setSelectedPlanType(planType);
 
     // Show payment method selection dialog if user has saved payment methods
-    if (paymentMethods.length > 0) {
-      setShowPaymentMethodDialog(true);
-    } else {
-      // Proceed directly to payment
-      await proceedToPayment(planType);
-    }
+    // if (paymentMethods.length > 0) {
+    //   setShowPaymentMethodDialog(true);
+    // } else {
+    //   // Proceed directly to payment
+    //   await proceedToPayment(planType);
+    // }
+    await proceedToPayment(planType);
   };
 
   const proceedToPayment = async (planType: string) => {
     setLoading(planType);
-    setShowPaymentMethodDialog(false);
+    // setShowPaymentMethodDialog(false);
 
     try {
       // Create order
       const orderResponse = await apiCall("/api/payments/create", "POST", {
         subscriptionId: subscription?.subscription?.id || null,
         tierId: plans?.find((p) => p.type === planType)?.id,
+        paymentMethodId: selectedPaymentMethodId || null,
       });
 
       if (!orderResponse.success) {
@@ -168,6 +170,14 @@ export default function PricingPage() {
         image:
           "https://myeternalguide.com/wp-content/uploads/2025/10/MEG-Logo-New-Tagline_286x54.png",
         order_id: orderResponse.data.orderId,
+        tokenId: orderResponse.data.tokenId,
+        ...(orderResponse.data.customerId && {
+          customer_id: orderResponse.data.customerId,
+        }),
+        ...(orderResponse.data.tokenId && {
+          recurring: "1", // Required for token-based payments
+          token: orderResponse.data.tokenId,
+        }),
         handler: async function (response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;

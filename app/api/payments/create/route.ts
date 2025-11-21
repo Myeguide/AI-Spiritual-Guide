@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createRazorpayOrder } from '@/lib/services/razorpay';
+import { createRazorpayOrder, getCardToken } from '@/lib/services/razorpay';
 import { ApiResponse, RazorpayError } from '@/types/payment';
-import { verifyToken } from '@/lib/generate-token';
 import { prisma } from '@/lib/prisma';
+import { AuthMiddleware } from '@/app/middleware/middleware';
 
 /**
  * POST /api/payments/create-order
@@ -10,34 +10,28 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(req: NextRequest) {
     try {
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.split(" ")[1];
+        const auth = AuthMiddleware(req);
 
-        if (!token) {
-            return NextResponse.json(
-                { error: "Unauthorized - No token provided" },
-                { status: 401 }
-            );
+        if ("error" in auth) {
+            return NextResponse.json(auth, { status: auth.status });
         }
-
-        const verified = verifyToken(token);
-        if (!verified) {
-            return NextResponse.json(
-                { error: "Invalid or expired token" },
-                { status: 401 }
-            )
-        }
-        const userId = verified.userId;
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid token" },
-                { status: 401 }
-            );
-        }
+        const { userId } = auth;
 
         // Parse request body
         const body = await req.json();
-        const { subscriptionId, tierId } = body;
+        const { subscriptionId, tierId, paymentMethodId } = body;
+        let paymentMethod: any = null;
+
+        // ⭐ Fetch payment method if provided
+        if (paymentMethodId) {
+            paymentMethod = await prisma.paymentMethod.findUnique({
+                where: {
+                    id: paymentMethodId,
+                    userId: userId,
+                    isActive: true,
+                },
+            });
+        }
 
         if (!subscriptionId && !tierId) {
             return NextResponse.json<ApiResponse>(
@@ -90,7 +84,6 @@ export async function POST(req: NextRequest) {
                         status: 'PENDING',
                     },
                 });
-
                 tier = newTier;
             } else {
                 // Just using existing subscription
@@ -98,23 +91,55 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Create Razorpay order
-        const order = await createRazorpayOrder({
-            amount: tier.price,
-            currency: tier.currency,
-            subscriptionId: subscription.id,
-            userId: userId,
-            notes: {
-                tierName: tier.name,
-                planType: tier.type,
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                phoneNumber: true,
             },
         });
+
+        if (!user) {
+            return NextResponse.json<ApiResponse>(
+                { success: false, error: 'User not found' },
+                { status: 404 }
+            );
+        }
+
+        let customerId: string | null = null;
+        try {
+            customerId = await getOrCreateCustomerId(userId);
+            console.log('✅ Customer ID obtained:', customerId);
+        } catch (error) {
+            console.error('⚠️ Failed to create customer, continuing without it', error);
+            // Continue without customer - single payment mode
+            customerId = '';
+        }
+
+        // Create Razorpay order
+        const order = await createRazorpayOrder(
+            {
+                amount: tier.price,
+                currency: tier.currency,
+                subscriptionId: subscription.id,
+                userId: userId,
+                notes: {
+                    tierName: tier.name,
+                    planType: tier.type,
+                    paymentMethodId: paymentMethodId || 'new',
+                },
+            }, customerId || undefined
+        );
 
         // Create payment record
         const payment = await prisma.payment.create({
             data: {
                 userId: userId,
                 subscriptionId: subscription.id,
+                paymentMethodId: paymentMethodId || null,
                 razorpayOrderId: order.id,
                 amount: tier.price,
                 currency: tier.currency,
@@ -123,11 +148,11 @@ export async function POST(req: NextRequest) {
                 notes: {
                     orderId: order.id,
                     tierName: tier.name,
+                    customerId: customerId,
                 },
             },
         });
-
-        return NextResponse.json<ApiResponse>({
+        const response = {
             success: true,
             data: {
                 orderId: order.id,
@@ -136,8 +161,14 @@ export async function POST(req: NextRequest) {
                 subscriptionId: subscription.id,
                 paymentId: payment.id,
                 keyId: process.env.RAZORPAY_KEY_ID,
+                customerId: customerId,
+                userEmail: user.email,
+                userName: `${user.firstName} ${user.lastName}`,
+                userPhone: user.phoneNumber,
             },
-        });
+        };
+
+        return NextResponse.json<ApiResponse>(response);
     } catch (error: any) {
         console.error('POST /api/payments/create error:', error);
 
@@ -164,4 +195,15 @@ export async function GET() {
         },
         { status: 405 }
     );
+}
+
+
+// Add this helper function
+async function getOrCreateCustomerId(userId: string): Promise<string | null> {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { paymentMethods: { where: { isActive: true }, take: 1 } }
+    });
+
+    return user?.paymentMethods[0]?.customerId ?? null;
 }

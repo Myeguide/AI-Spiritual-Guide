@@ -373,6 +373,15 @@ export interface PaymentMethodListResponse {
 }
 
 // Razorpay Order Creation
+
+export interface RazorpayOrderOptions {
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes: Record<string, any>;
+  customer_id?: string;
+}
+
 export interface CreateRazorpayOrderDTO {
   amount: number; // in smallest currency unit (paise for INR)
   currency: string;
