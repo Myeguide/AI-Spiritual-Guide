@@ -15,6 +15,8 @@ interface IAuth {
     loading: boolean;
     token: string | null;
     subscription: SubscriptionInfo;
+    subscriptionFetched: boolean;
+    subscriptionLoading: boolean;
 
     setUser: (user: LoggedInUser) => void;
     updateUser: (udpates: Partial<LoggedInUser>) => void;
@@ -38,6 +40,8 @@ export const useUserStore = create<IAuth>()(
                 hasActiveSubscription: false,
                 expiresAt: null,
             },
+            subscriptionLoading: false,
+            subscriptionFetched: false,
 
             setUser: (user: LoggedInUser) => {
                 const previousUserId = get().currentUserId;
@@ -63,6 +67,7 @@ export const useUserStore = create<IAuth>()(
                 })),
 
             fetchSubscription: async () => {
+                 set({ subscriptionLoading: true });
                 try {
                     const { token, user } = get();
                     if (!token || !user?.id) return;
@@ -80,10 +85,13 @@ export const useUserStore = create<IAuth>()(
                                 hasActiveSubscription: data.data.hasActiveSubscription,
                                 expiresAt: data.data.expiresAt ? new Date(data.data.expiresAt) : null,
                             },
+                             subscriptionFetched: true,
                         });
                     }
                 } catch (error) {
                     console.error("Failed to fetch subscription:", error);
+                }finally{
+                    set({ subscriptionLoading: false });
                 }
             },
 

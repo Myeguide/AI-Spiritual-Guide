@@ -11,17 +11,14 @@ import UserProfile from "@/frontend/components/Profile";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
-  const { isAuthenticated, fetchSubscription } = useUserStore();
+  const { user, token, fetchSubscription } = useUserStore();
+  const authenticated = !!user && !!token;
 
-  // Sync on app mount if already authenticated
   useEffect(() => {
     const initializeSync = async () => {
-      if (!isAuthenticated()) {
-        return;
-      }
-      if (isSynced) {
-        return;
-      }
+      console.log("Initializing data sync...");
+      if (!authenticated || isSynced) return;
+
       try {
         await syncDataFromServer();
         setIsSynced(true);
@@ -30,40 +27,33 @@ export default function App() {
         setIsSynced(false);
       }
     };
+
     initializeSync();
-  }, [isAuthenticated, isSynced]);
+  }, [authenticated, isSynced]);
 
-  // Sync when user comes back online
+  // Handle online/visibility events
   useEffect(() => {
-    if (!isAuthenticated()) return;
-    const handleOnline = async () => {
-      setIsSynced(false); // Trigger re-sync
-    };
-    window.addEventListener("online", handleOnline);
+    if (!authenticated) return;
+
+    const handleResync = () => setIsSynced(false);
+
+    window.addEventListener("online", handleResync);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") handleResync();
+    });
+
     return () => {
-      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("online", handleResync);
+      document.removeEventListener("visibilitychange", handleResync);
     };
-  }, [isAuthenticated]);
+  }, [authenticated]);
 
-  // Sync when tab becomes visible again
+  // Fetch subscription when authenticated
   useEffect(() => {
-    if (!isAuthenticated()) return;
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
-        setIsSynced(false); // Trigger re-sync
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (isAuthenticated()) {
+    if (authenticated) {
       fetchSubscription();
     }
-  }, [fetchSubscription, isAuthenticated]);
+  }, [authenticated, fetchSubscription]);
 
   return (
     <BrowserRouter>
