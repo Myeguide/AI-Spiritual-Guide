@@ -50,14 +50,15 @@ export function loadTemplate(documentType: string): string {
         return templateCache.get(documentType)!;
     }
 
-    const promptsDir = findPromptsDir();
-
+     const promptsDir = findPromptsDir();
+    console.log("Prompts directory:", promptsDir);
     if (!promptsDir) {
         return DEFAULT_GENERAL_TEMPLATE;
     }
-
+ 
     try {
         const filePath = path.join(promptsDir, `${documentType}.txt`);
+        console.log(`Loading template from: ${filePath}`);
 
         if (!fs.existsSync(filePath)) {
             throw new Error(`File not found: ${filePath}`);
