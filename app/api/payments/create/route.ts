@@ -89,6 +89,30 @@ export async function POST(req: NextRequest) {
                 // Just using existing subscription
                 tier = subscription.tier;
             }
+        } else if (tierId) {
+            tier = await prisma.subscriptionTier.findUnique({
+                where: { id: tierId },
+            });
+
+            if (!tier) {
+                return NextResponse.json<ApiResponse>(
+                    { success: false, error: 'Subscription tier not found' },
+                    { status: 404 }
+                );
+            }
+
+            // Create new subscription
+            subscription = await prisma.subscription.create({
+                data: {
+                    userId: userId,
+                    tierId: tier.id,
+                    planType: tier.type,
+                    amount: tier.price,
+                    currency: tier.currency,
+                    totalRequests: tier.totalRequests,
+                    status: 'PENDING',
+                },
+            });
         }
 
         const user = await prisma.user.findUnique({
@@ -118,7 +142,7 @@ export async function POST(req: NextRequest) {
             // Continue without customer - single payment mode
             customerId = '';
         }
-
+        console.log(tier);
         // Create Razorpay order
         const order = await createRazorpayOrder(
             {
