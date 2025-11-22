@@ -1,52 +1,110 @@
-import { User } from "@/types/user";
+// store/userStore.ts
 import { create } from "zustand";
-import { persist } from 'zustand/middleware';
+import { persist } from "zustand/middleware";
+import type { LoggedInUser } from "@/types/user";
+import { clearAllUserData } from "../dexie/queries";
+
+interface SubscriptionInfo {
+    hasActiveSubscription: boolean;
+    expiresAt: Date | null;
+}
 
 interface IAuth {
-    user: User | null;
+    user: LoggedInUser | null;
+    currentUserId: string | null;
     loading: boolean;
     token: string | null;
-    setUser: (user: User | null) => void;
+    subscription: SubscriptionInfo;
+
+    setUser: (user: LoggedInUser) => void;
+    updateUser: (udpates: Partial<LoggedInUser>) => void;
     setLoading: (loading: boolean) => void;
     setToken: (token: string | null) => void;
+    setSubscription: (subscription: Partial<SubscriptionInfo>) => void;
+    fetchSubscription: () => Promise<void>;
     logout: () => void;
     isAuthenticated: () => boolean;
 }
 
-export const withStorageDOMEvents = (store: any) => {
-    const storageEventCallback = (e: StorageEvent) => {
-        if (e.key === store.persist.getOptions().name && e.newValue) {
-            store.persist.rehydrate();
-        }
-
-        window.addEventListener('storage', storageEventCallback);
-
-        return () => {
-            window.removeEventListener('storage', storageEventCallback);
-        };
-    }
-}
-
+// create the store — let zustand's types infer everything by using the generic persist<IAuth>
 export const useUserStore = create<IAuth>()(
     persist(
         (set, get) => ({
             user: null,
+            currentUserId: null,
             loading: false,
             token: null,
-            setUser: (user) => set({ user }),
+            subscription: {
+                hasActiveSubscription: false,
+                expiresAt: null,
+            },
+
+            setUser: (user: LoggedInUser) => {
+                const previousUserId = get().currentUserId;
+                const newUserId = user.id;
+
+                // Check if user changed
+                if (previousUserId && previousUserId !== newUserId) {
+                    // Clear old user's data from IndexedDB
+                    clearAllUserData().catch(console.error);
+                }
+                set({ user, currentUserId: newUserId });
+            },
+            updateUser: (updates: Partial<LoggedInUser>) =>
+                set((state) => ({
+                    user: state.user ? { ...state.user, ...updates } : null,
+                })),
             setLoading: (loading) => set({ loading }),
             setToken: (token) => set({ token }),
-            logout: () => set({ user: null, token: null, loading: false }),
+
+            setSubscription: (subscriptionData) =>
+                set((state) => ({
+                    subscription: { ...state.subscription, ...subscriptionData },
+                })),
+
+            fetchSubscription: async () => {
+                try {
+                    const { token, user } = get();
+                    if (!token || !user?.id) return;
+
+                    const response = await fetch(`/api/subscription/status?userId=${user.id}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        set({
+                            subscription: {
+                                hasActiveSubscription: data.data.hasActiveSubscription,
+                                expiresAt: data.data.expiresAt ? new Date(data.data.expiresAt) : null,
+                            },
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch subscription:", error);
+                }
+            },
+
+
+            logout: () => {
+                clearAllUserData().catch(console.error);
+                set({ user: null, token: null, currentUserId: null });
+            },
+
             isAuthenticated: () => {
                 const { user, token } = get();
                 return !!user && !!token;
-            }
+            },
         }),
         {
-            name: 'user-storage',
-            partialize: (state) => ({ user: state.user, token: state.token }) // only persist user and token
+            name: "user-storage",
+            partialize: (state) => ({
+                user: state.user,
+                token: state.token,
+                subscription: state.subscription,
+            }),
         }
     )
-)
-
-withStorageDOMEvents(useUserStore);
+);

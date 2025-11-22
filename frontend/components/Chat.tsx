@@ -1,17 +1,17 @@
-import { useChat } from '@ai-sdk/react';
-import Messages from './Messages';
-import ChatInput from './ChatInput';
-import ChatNavigator from './ChatNavigator';
-import { UIMessage } from 'ai';
-import { v4 as uuidv4 } from 'uuid';
-import { createMessage } from '@/frontend/dexie/queries';
-import { useAPIKeyStore } from '@/frontend/stores/APIKeyStore';
-import { useModelStore } from '@/frontend/stores/ModelStore';
-import ThemeToggler from './ui/ThemeToggler';
-import { SidebarTrigger, useSidebar } from './ui/sidebar';
-import { Button } from './ui/button';
-import { MessageSquareMore } from 'lucide-react';
-import { useChatNavigator } from '@/frontend/hooks/useChatNavigator';
+import { useChat } from "@ai-sdk/react";
+import Messages from "./Messages";
+import ChatInput from "./ChatInput";
+import ChatNavigator from "./ChatNavigator";
+import { UIMessage } from "ai";
+import { createMessage } from "@/frontend/dexie/queries";
+import ThemeToggler from "./ui/ThemeToggler";
+import { SidebarTrigger, useSidebar } from "./ui/sidebar";
+import { Button } from "./ui/button";
+import { Menu, MessageSquareMore } from "lucide-react";
+import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
+import { useUserStore } from "@/frontend/stores/UserStore";
+import { useState, useRef } from "react";
+import { apiCall } from "@/utils/api-call";
 
 interface ChatProps {
   threadId: string;
@@ -19,19 +19,24 @@ interface ChatProps {
 }
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
-  const { getKey } = useAPIKeyStore();
-  const selectedModel = useModelStore((state) => state.selectedModel);
-  const modelConfig = useModelStore((state) => state.getModelConfig());
+  const userConfig = useUserStore((state) => state.token);
+
+
+  // Use ref to prevent race conditions between onResponse and onError
 
   const {
     isNavigatorVisible,
     handleToggleNavigator,
     closeNavigator,
     registerRef,
-    scrollToMessage,
   } = useChatNavigator();
 
-  const {
+  const errorSetRef = useRef<{
+    message: string;
+    details?: any;
+  } | null>(null);
+
+ const {
     messages,
     input,
     status,
@@ -40,33 +45,52 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     append,
     stop,
     reload,
-    error,
+    error, // Use this built-in error
   } = useChat({
     id: threadId,
     initialMessages,
     experimental_throttle: 50,
-    onFinish: async ({ parts }) => {
+    onFinish: async (message) => {
       const aiMessage: UIMessage = {
-        id: uuidv4(),
-        parts: parts as UIMessage['parts'],
-        role: 'assistant',
-        content: '',
+        id: message.id,
+        parts: message.parts as UIMessage["parts"],
+        role: "assistant",
+        content: message.content,
         createdAt: new Date(),
       };
-
       try {
         await createMessage(threadId, aiMessage);
+        await apiCall("/api/messages", "POST", {
+          threadId,
+          message: aiMessage,
+        });
       } catch (error) {
         console.error(error);
       }
     },
     headers: {
-      [modelConfig.headerKey]: getKey(modelConfig.provider) || '',
-    },
-    body: {
-      model: selectedModel,
+      Authorization: `Bearer ${userConfig}`,
     },
   });
+
+
+  const rateLimitError = error ? (() => {
+    try {
+      const parsed = JSON.parse(error.message);
+      return {
+        message: parsed.error || "Error",
+        details: parsed.message || "Something went wrong",
+      };
+    } catch {
+      return {
+        message: "Error",
+        details: error.message,
+      };
+    }
+  })() : null;
+
+  console.log("error from useChat:", error);
+  console.log("parsed rateLimitError:", rateLimitError);
 
   return (
     <div className="relative w-full">
@@ -91,26 +115,26 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
           append={append}
           setInput={setInput}
           stop={stop}
+          rateLimitError={rateLimitError}
         />
       </main>
       <ThemeToggler />
       <Button
         onClick={handleToggleNavigator}
-        variant="outline"
+        variant="ghost"
         size="icon"
-        className="fixed right-16 top-4 z-20"
+        className="fixed right-10 top-1 z-20 sm:hidden"
         aria-label={
           isNavigatorVisible
-            ? 'Hide message navigator'
-            : 'Show message navigator'
+            ? "Hide message navigator"
+            : "Show message navigator"
         }
       >
-        <MessageSquareMore className="h-5 w-5" />
+        <Menu className="h-5 w-5" />
       </Button>
 
       <ChatNavigator
         threadId={threadId}
-        scrollToMessage={scrollToMessage}
         isVisible={isNavigatorVisible}
         onClose={closeNavigator}
       />
@@ -120,7 +144,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
 
 const ChatSidebarTrigger = () => {
   const { state } = useSidebar();
-  if (state === 'collapsed') {
+  if (state === "collapsed") {
     return <SidebarTrigger className="fixed left-4 top-4 z-100" />;
   }
   return null;

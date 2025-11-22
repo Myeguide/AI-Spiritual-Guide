@@ -125,3 +125,10 @@ export const getMessageSummaries = async (threadId: string) => {
     .between([threadId, Dexie.minKey], [threadId, Dexie.maxKey])
     .toArray();
 };
+
+export const clearAllUserData = async () => {
+  return await db.transaction("rw", [db.threads, db.messages], async () => {
+    await db.threads.clear();
+    await db.messages.clear();
+  });
+};

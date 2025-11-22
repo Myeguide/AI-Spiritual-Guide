@@ -1,8 +1,11 @@
-export type User = {
+export type LoggedInUser = {
     id: string;
-    firstname: string;
-    lastname: string;
+    firstName: string;
+    lastName: string;
     email: string;
     age?: number;
-    phone?: string;
+    dob: "yyyy-MM-dd";
+    phoneNumber?: string;
+    password: string;
+    avatar?: string;
 }

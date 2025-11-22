@@ -1,7 +1,8 @@
 import { useCompletion } from '@ai-sdk/react';
-import { useAPIKeyStore } from '@/frontend/stores/APIKeyStore';
 import { toast } from 'sonner';
 import { createMessageSummary, updateThread } from '@/frontend/dexie/queries';
+import { useUserStore } from '../stores/UserStore';
+import { apiCall } from '@/utils/api-call';
 
 interface MessageSummaryPayload {
   title: string;
@@ -11,13 +12,13 @@ interface MessageSummaryPayload {
 }
 
 export const useMessageSummary = () => {
-  const getKey = useAPIKeyStore((state) => state.getKey);
+  const userConfig = useUserStore((state) => state.token);
 
   const { complete, isLoading } = useCompletion({
     api: '/api/completion',
-    ...(getKey('google') && {
-      headers: { 'X-Google-API-Key': getKey('google')! },
-    }),
+    ...{
+      headers: { Authorization: `Bearer ${userConfig}` },
+    },
     onResponse: async (response) => {
       try {
         const payload: MessageSummaryPayload = await response.json();
@@ -27,6 +28,7 @@ export const useMessageSummary = () => {
 
           if (isTitle) {
             await updateThread(threadId, title);
+            await apiCall("/api/threads", "PATCH", { threadId, title })
             await createMessageSummary(threadId, messageId, title);
           } else {
             await createMessageSummary(threadId, messageId, title);

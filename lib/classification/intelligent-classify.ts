@@ -101,18 +101,7 @@ export function intelligentClassify(question: string): {
     // TIER 3: CONTEXT-SPECIFIC PATTERNS
     // ============================================================
 
-    // RULE 3.1: Children/Parenting (Must have explicit child-related words)
-    if (/\b(child|children|son|daughter|kid|kids|baby|babies|toddler|teen|teenager)\b/.test(lowerQuery) ||
-        (/\b(parenting|parent|raise|raising)\b/.test(lowerQuery) && /\b(child|children|son|daughter|kid)\b/.test(lowerQuery))) {
-        return {
-            type: "children_youth",
-            confidence: 0.98,
-            reasoning: "Query about raising children or parenting guidance",
-            keywords: ["children", "parenting", "youth"],
-        };
-    }
-
-    // RULE 3.2: Health/Ayurveda
+    // RULE 3.1: Health/Ayurveda
     if (
         (/\b(pain|ache|sick|illness|disease|health|ailment)\b/.test(lowerQuery) &&
             /\b(ayurveda|ayurvedic|natural|herbal|remedy|cure)\b/.test(lowerQuery)) ||
@@ -126,7 +115,7 @@ export function intelligentClassify(question: string): {
         };
     }
 
-    // RULE 3.3: Emotions (NOT related to sex/intimacy)
+    // RULE 3.2: Emotions (NOT related to sex/intimacy)
     // Only match if no meditation/practice keywords
     if (
         /\b(anxious|anxiety|depressed|depression|sad|sadness|angry|anger|fear|worried|stress|stressed|grief|restless|overwhelmed)\b/.test(lowerQuery) &&
@@ -141,7 +130,7 @@ export function intelligentClassify(question: string): {
         };
     }
 
-    // RULE 3.4: Comparing Religions
+    // RULE 3.3: Comparing Religions
     if (
         /\b(difference between|compare|comparison|vs|versus)\b/.test(lowerQuery) &&
         /\b(hinduism|buddhism|islam|christianity|judaism|religion|faith)\b/.test(lowerQuery)
@@ -154,7 +143,7 @@ export function intelligentClassify(question: string): {
         };
     }
 
-    // RULE 3.5: Deities/Sages/Saints
+    // RULE 3.4: Deities/Sages/Saints
     const deities = [
         "krishna", "rama", "shiva", "vishnu", "durga", "lakshmi",
         "saraswati", "ganesh", "ganesha", "hanuman", "parvati",
@@ -173,7 +162,7 @@ export function intelligentClassify(question: string): {
         }
     }
 
-    // RULE 3.6: "What is" + Specific Spiritual Concept
+    // RULE 3.5: "What is" + Specific Spiritual Concept
     const spiritualConcepts = [
         "karma", "moksha", "mukti", "atman", "maya", "brahman",
         "dharma", "bhakti", "jnana", "vairagya", "samsara",
@@ -249,10 +238,6 @@ export function intelligentClassify(question: string): {
             "sage", "saint", "rishi", "guru", "master", "krishna",
             "rama", "shiva", "vishnu", "devi",
         ],
-        "children_youth": [
-            "child", "children", "youth", "young", "parent", "father",
-            "mother", "kid", "family", "education",
-        ],
         "vedic_observance_rituals_dates": [
             "ritual", "observ", "puja", "festival", "fast", "cerem",
             "worship", "pooja", "vedic",
@@ -289,6 +274,7 @@ export function intelligentClassify(question: string): {
         }
     }
 
+    // Return result if we have a decent keyword match
     if (bestScore >= 2) {
         const confidence = Math.min(0.5 + (bestScore * 0.1), 0.85);
         return {
@@ -299,14 +285,26 @@ export function intelligentClassify(question: string): {
         };
     }
 
+    // If we found 1 keyword match, return with low confidence
+    if (bestScore === 1) {
+        return {
+            type: matchedType,
+            confidence: 0.6,
+            reasoning: `Weak match: only 1 keyword found in ${matchedType}`,
+            keywords: matchedKeywords,
+        };
+    }
+
     // ============================================================
-    // ULTIMATE FALLBACK
+    // ULTIMATE FALLBACK - No keywords matched
     // ============================================================
 
+    // Return empty type with LOW confidence to trigger LLM fallback
     return {
-        type: "",
-        confidence: 0.98,
-        reasoning: "No specific patterns matched - providing general guidance",
+        type: "", // Empty type signals need for LLM classification
+        confidence: 0.4, // LOW confidence (not 0.98!)
+        reasoning: "No specific patterns matched - requires LLM classification",
         keywords: [],
     };
+
 }
