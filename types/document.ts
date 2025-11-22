@@ -3,7 +3,6 @@ export const documentTypes = [
     "afterlife_cosmic_process",
     "astrology",
     "ayurveda_health",
-    "children_youth",
     "comparative_theological",
     "dharma_smrti_law",
     "emotional_spiritual",

@@ -1,47 +1,58 @@
-import { RoutedQuestion } from "@/types/question";
-import { supabase } from "../supabase";
 import { intelligentClassify } from "./intelligent-classify";
-import { semanticClassification } from "./semantic-classfy";
-import { fallbackClassification } from "./fallback-classify";
-import { SpiritualDocument } from "@/types/document";
+import { ClassificationResult, llmClassify, loadTemplate } from "./classify-helper";
 
-export async function classifyQuestion(question: string): Promise<RoutedQuestion> {
+export async function classifyQuestion(question: string): Promise<ClassificationResult> {
     try {
-        // STEP 1: Use intelligent rule-based classification first
-        const smartResult = intelligentClassify(question);
+        // STEP 1: Try rule-based classification
+        let classification = intelligentClassify(question);
 
-        // STEP 2: Get documents of the classified type
-        const { data: relevantDocuments, error: docError } = await supabase
-            .from("spiritual_documents")
-            .select("*")
-            .eq("document_type", smartResult.type)
-            .limit(5);
+        console.log("Rule-based classification:", {
+            type: classification.type,
+            confidence: classification.confidence,
+            keywords: classification.keywords
+        });
 
-        if (docError) throw docError;
+        // STEP 2: If low confidence or empty type, use LLM
+        if (!classification.type || classification.confidence < 0.7) {
+            console.log("Low confidence, using LLM fallback...");
+            const llmResult = await llmClassify(question);
 
-        // If documents found, return immediately
-        if (relevantDocuments && relevantDocuments.length > 0) {
-            return {
-                documentType: smartResult.type,
-                confidence: smartResult.confidence,
-                question,
-                relevantDocuments: relevantDocuments.map((doc: SpiritualDocument) => ({
-                    id: doc.id,
-                    type: doc.type,
-                    content: doc.content,
-                    title: doc.title,
-                    description: doc.description,
-                })),
-                reasoning: smartResult.reasoning,
-                matchedKeywords: smartResult.keywords,
+            classification = {
+                type: llmResult.type,
+                confidence: llmResult.confidence,
+                reasoning: llmResult.reasoning,
+                keywords: classification.keywords, // Keep detected keywords
             };
         }
 
-        // STEP 3: If no documents found, try semantic search as fallback
-        return await semanticClassification(question, smartResult);
+        // STEP 3: Load template from file
+        let templateContent = ''
+        if (classification.type != 'general') {
+            templateContent = loadTemplate(classification.type);
+        }
 
-    } catch (error: unknown) {
-        console.error("Classification Error:", error);
-        return await fallbackClassification(question);
+
+        return {
+            documentType: classification.type || "general",
+            confidence: classification.confidence,
+            question: question.trim(),
+            templateContent,
+            reasoning: classification.reasoning,
+            matchedKeywords: classification.keywords,
+        };
+
+    } catch (error) {
+        console.error("Classification error:", error);
+
+        // Ultimate fallback
+        return {
+            documentType: "general",
+            confidence: 0.5,
+            question: question.trim(),
+            templateContent: loadTemplate("general"),
+            reasoning: "Error occurred, using general template",
+            matchedKeywords: [],
+        };
     }
 }
+

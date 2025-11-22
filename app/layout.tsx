@@ -16,12 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chat0.space"),
+  metadataBase: new URL("https://myeternalguide.com/"),
   title: {
-    default: 'Chat0',
-    template: '%s - Chat0',
+    default: 'MyEternalGuide',
+    template: '%s - MyEternalGuide',
   },
-  description: 'Fastest AI Chat App',
+  description: 'Fastest AI Spiritual App',
   twitter: {
     card: 'summary_large_image',
   },

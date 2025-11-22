@@ -1,6 +1,6 @@
-import { SidebarProvider } from '@/frontend/components/ui/sidebar';
-import ChatSidebar from '@/frontend/components/ChatSidebar';
-import { Outlet } from 'react-router';
+import { SidebarProvider } from "@/frontend/components/ui/sidebar";
+import ChatSidebar from "@/frontend/components/ChatSidebar";
+import { Outlet } from "react-router";
 
 export default function ChatLayout() {
   return (
