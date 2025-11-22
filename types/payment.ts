@@ -1,6 +1,5 @@
 // Import Prisma enums (these will be auto-generated)
-import { SubscriptionStatus, PaymentStatus } from '@/lib/generated/prisma';
-import { PaymentMethodType } from '@/lib/generated/prisma';
+import { SubscriptionStatus, PaymentStatus, PaymentMethodType } from '@/lib/generated/prisma';
 
 // Plan types (not in Prisma enum, so we define here)
 export enum PlanType {
