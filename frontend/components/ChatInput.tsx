@@ -59,7 +59,7 @@ function PureChatInput({
   rateLimitError,
 }: ChatInputProps) {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
-  const subscription = useUserStore((state) => state.subscription);
+  const { subscription, subscriptionLoading, subscriptionFetched } = useUserStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<{
     message: string;
@@ -79,7 +79,7 @@ function PureChatInput({
       isSubmitting,
     [input, status, isSubmitting]
   );
-  
+
   const { complete } = useMessageSummary();
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
@@ -87,12 +87,12 @@ function PureChatInput({
       toast.error("Please enter a message");
       return;
     }
-    
+
     // Check rate limit first - show error and popup
     if (rateLimitError) {
       return; // Don't proceed with submission
     }
-    
+
     // Check subscription
     if (!subscription.hasActiveSubscription) {
       setSubscriptionError({
@@ -101,11 +101,11 @@ function PureChatInput({
       });
       return;
     }
-    
+
     if (status === "streaming" || status === "submitted") {
       return;
     }
-    
+
     if (isSubmitting) {
       return;
     }
@@ -123,7 +123,7 @@ function PureChatInput({
           if (!threadResponse.success) {
             throw new Error("Failed to create thread on server");
           }
-                    complete(currentInput.trim(), {
+          complete(currentInput.trim(), {
             body: { threadId, messageId, isTitle: true },
           });
         } catch (error) {
@@ -174,7 +174,7 @@ function PureChatInput({
     rateLimitError,
     subscription.hasActiveSubscription,
   ]);
-  
+
   if (!isAuthenticated) {
     return (
       <div className="fixed inset-0 z-90 bg-background bg-opacity-90 flex items-center justify-center">
@@ -194,10 +194,10 @@ function PureChatInput({
     setInput(e.target.value);
     adjustHeight();
   };
-  
+
   // Combine errors - rateLimitError takes precedence
   const displayError = rateLimitError || subscriptionError;
-  
+
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
       {displayError && (
@@ -216,10 +216,13 @@ function PureChatInput({
                 placeholder={
                   rateLimitError
                     ? rateLimitError.message
-                    : !subscription.hasActiveSubscription
-                    ? "Please subscribe to send messages"
-                    : "Ask your questions"
+                    : subscriptionLoading || !subscriptionFetched
+                      ? "Loading..."
+                      : !subscription.hasActiveSubscription
+                        ? "Please subscribe to send messages"
+                        : "Ask your questions"
                 }
+                disabled={subscriptionLoading || !subscriptionFetched}
                 className={cn(
                   "w-full px-4 py-3 border-none shadow-none dark:bg-transparent",
                   "placeholder:text-muted-foreground resize-none",
