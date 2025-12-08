@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OTPService, OTPError } from '@/lib/services/otp.service';
 import { verifyOTPSchema } from '@/lib/validators/auth.validator';
 import { z } from 'zod';
+import { SMSService } from '@/lib/services/sms.service';
 
 export async function POST(request: NextRequest) {
     try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
         const { phoneNumber, code } = verifyOTPSchema.parse(body);
 
         // Verify OTP
-        const isValid = await OTPService.verifyOTP(phoneNumber, code);
+        const isValid = await SMSService.verifyOTPViaMSG91(phoneNumber, code);
 
         if (!isValid) {
             return NextResponse.json(

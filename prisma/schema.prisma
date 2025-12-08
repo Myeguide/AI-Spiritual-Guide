@@ -43,12 +43,16 @@ model User {
   requestsUsedLifetime Int     @default(0) @map("requests_used_lifetime")
 
   // Relations
-  Thread         Thread[]
-  userMemory     UserMemory?
-  payments       Payment[]
-  Subscription   Subscription[]
-  OtpCode        OtpCode[]
-  paymentMethods PaymentMethod[]
+  Thread           Thread[]
+  userMemory       UserMemory?
+  payments         Payment[]
+  Subscription     Subscription[]
+  OtpCode          OtpCode[]
+  paymentMethods   PaymentMethod[]
+  whatsappMessages WhatsAppMessage[]
+
+  // WhatsApp tracking
+  whatsappEnabled Boolean @default(false) @map("whatsapp_enabled")
 
   @@index([email])
   @@index([activeSubscriptionId])
@@ -94,6 +98,9 @@ model Subscription {
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier     SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Restrict)
   payments Payment[]
+
+  reminderSentAt   DateTime? @map("reminder_sent_at") // 5-day reminder
+  expiredEmailSent Boolean   @default(false) @map("expired_email_sent")
 
   @@index([userId])
   @@index([tierId])
@@ -205,6 +212,40 @@ model Message {
   @@index([threadId])
   @@index([userId])
   @@index([createdAt])
+}
+
+model WhatsAppMessage {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  phoneNumber String   @map("phone_number")
+  direction   String // 'inbound' or 'outbound'
+  content     String
+  msg91Id     String?  @map("msg91_id")
+  status      String   @default("sent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@map("whatsapp_messages")
+}
+
+// Optional: Email log for debugging
+model EmailLog {
+  id       String   @id @default(cuid())
+  userId   String   @map("user_id")
+  email    String
+  type     String // 'subscription_reminder', 'subscription_expired', etc.
+  subject  String
+  status   String   @default("sent") // 'sent', 'failed', 'bounced'
+  metadata Json?
+  sentAt   DateTime @default(now()) @map("sent_at")
+
+  @@index([userId])
+  @@index([type])
+  @@index([sentAt])
+  @@map("email_logs")
 }
 
 enum SubscriptionStatus {

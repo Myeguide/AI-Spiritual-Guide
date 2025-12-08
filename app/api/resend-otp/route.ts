@@ -1,4 +1,3 @@
-import { OTPService } from "@/lib/services/otp.service";
 import { SMSService } from "@/lib/services/sms.service";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -15,16 +14,12 @@ export async function POST(req: NextRequest) {
         const { phoneNumber } = validatedData;
 
         // Generate and send new OTP
-        const result = await OTPService.generateOTP(phoneNumber);
+        await SMSService.resendOTP(phoneNumber, 'text');
 
-        await SMSService.sendOTP(phoneNumber, result.code!);
-        return NextResponse.json(
-            {
-                success: true,
-                message: "OTP has been resent successfully",
-            },
-            { status: 200 }
-        );
+        return NextResponse.json({
+            success: true,
+            message: "OTP resent successfully",
+        });
     } catch (error) {
         console.error("[POST /api/auth/resend-otp] ❌ Error:", error);
 

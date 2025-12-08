@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { useUserStore } from "./stores/UserStore";
 import UserProfile from "@/frontend/components/Profile";
+import MainLayout from "./MainLayout";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
@@ -58,14 +59,21 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Index />} />
+        {/* Layout with footer */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Index />} />
+          <Route path="/billing" element={<PricingPage />} />
+          <Route path="/account" element={<UserProfile />} />
+        </Route>
+
+        {/* Chat layout WITHOUT footer */}
         <Route path="chat" element={<ChatLayout />}>
-          <Route index element={<Home />} />
+          <Route index element={<Home/>} />
           <Route path=":id" element={<Thread />} />
         </Route>
-        <Route path="/billing" element={<PricingPage />} />
-        <Route path="/account" element={<UserProfile />} />
-        <Route path="*" element={<p> Not found </p>} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<p>Not found</p>} />
       </Routes>
     </BrowserRouter>
   );
