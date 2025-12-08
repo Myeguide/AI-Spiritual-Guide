@@ -3,6 +3,7 @@ import { ApiResponse, RazorpayError } from '@/types/payment';
 import { fetchRazorpayPayment, savePaymentMethodFromPayment, verifyPaymentSignature } from '@/lib/services/razorpay';
 import { prisma } from '@/lib/prisma';
 import { AuthMiddleware } from '@/app/middleware/middleware';
+import { WhatsAppService } from '@/lib/services/whatsapp.service';
 
 export async function POST(req: NextRequest) {
     try {
@@ -126,6 +127,29 @@ export async function POST(req: NextRequest) {
                 activeSubscriptionId: updatedSubscription.id,
             },
         });
+
+        // Send WhatsApp welcome message for paid plans only
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    phoneNumber: true,
+                    firstName: true,
+                    lastName: true,
+                },
+            });
+
+            if (user && payment.subscription.tier.type !== 'free') {
+                await WhatsAppService.sendWelcomeMessage(
+                    user.phoneNumber,
+                    `${user.firstName} ${user.lastName}`,
+                    payment.subscription.tier.name
+                );
+            }
+        } catch (whatsappError) {
+            // Don't fail payment verification if WhatsApp fails
+            console.error('WhatsApp welcome message failed:', whatsappError);
+        }
 
         // Save payment method if requested
         let savedPaymentMethod: { id: string; type: string, cardLast4: string, cardTokenId: string } | null = null;

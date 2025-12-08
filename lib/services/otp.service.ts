@@ -145,54 +145,54 @@ export class OTPService {
         }
     }
 
- static async generateOTP(
-  phoneNumber: string
-): Promise<{ success: boolean; message: string; code?: string }> {
-  try {
-    // Check rate limit (throws if blocked)
-    await this.checkRateLimit(phoneNumber);
+    static async generateOTP(
+        phoneNumber: string
+    ): Promise<{ success: boolean; message: string; code?: string }> {
+        try {
+            // Check rate limit (throws if blocked)
+            await this.checkRateLimit(phoneNumber);
 
-    const code = generateOTP();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            const code = generateOTP();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    // Atomic DB operations
-    await prisma.$transaction(async (tx) => {
-      // Invalidate existing unused OTPs
-      await tx.otpCode.updateMany({
-        where: {
-          phoneNumber,
-          isUsed: false,
-          expiresAt: { gte: new Date() },
-        },
-        data: { isUsed: true },
-      });
+            // Atomic DB operations
+            await prisma.$transaction(async (tx) => {
+                // Invalidate existing unused OTPs
+                await tx.otpCode.updateMany({
+                    where: {
+                        phoneNumber,
+                        isUsed: false,
+                        expiresAt: { gte: new Date() },
+                    },
+                    data: { isUsed: true },
+                });
 
-      // Create new OTP
-      await tx.otpCode.create({
-        data: {
-          phoneNumber,
-          code,
-          expiresAt,
-        },
-      });
-    });
-    
-    return {
-      success: true,
-      message: "OTP generated successfully",
-      code,
-    };
+                // Create new OTP
+                await tx.otpCode.create({
+                    data: {
+                        phoneNumber,
+                        code,
+                        expiresAt,
+                    },
+                });
+            });
 
-  } catch (error) {
-    console.error("[OTP] Generation failed:", error);
+            return {
+                success: true,
+                message: "OTP generated successfully",
+                code,
+            };
 
-    throw new OTPError(
-      "Failed to generate and send OTP",
-      "OTP_GENERATION_FAILED",
-      500
-    );
-  }
-}
+        } catch (error) {
+            console.error("[OTP] Generation failed:", error);
+
+            throw new OTPError(
+                "Failed to generate and send OTP",
+                "OTP_GENERATION_FAILED",
+                500
+            );
+        }
+    }
 
     /**
      * Verify OTP and remove from database upon successful verification

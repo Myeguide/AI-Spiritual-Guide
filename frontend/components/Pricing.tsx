@@ -313,21 +313,6 @@ export default function PricingPage() {
             ))}
           </div>
         )}
-
-        <div className="text-center mt-12">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            All plans include secure payments via Razorpay
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Need help choosing?{" "}
-            <a
-              href="mailto:support@Myeternalguide.com?subject=Support Request&body=Hello, I need help with..."
-              className="text-purple-600 underline"
-            >
-              Contact us
-            </a>
-          </p>
-        </div>
       </div>
 
       {/* Payment Method Selection Dialog */}

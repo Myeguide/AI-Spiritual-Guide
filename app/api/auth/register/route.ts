@@ -5,9 +5,9 @@ import { registerSchema } from "@/lib/validators/auth.validator";
 import { cookies } from "next/headers";
 import { generateToken } from "@/lib/generate-token";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { genSaltSync, hashSync } from "bcrypt-ts"
 import { calculateAge } from "@/utils/date-utils";
+import { SMSService } from "@/lib/services/sms.service";
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
         // 🔐 Verify OTP
         try {
-            await OTPService.verifyOTP(phoneNumber, code);
+            await SMSService.verifyOTPViaMSG91(phoneNumber, code);
         } catch (error) {
             if (error instanceof OTPError) {
                 return NextResponse.json(
