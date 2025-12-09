@@ -61,6 +61,13 @@ export async function msg91WhatsAppRequest(
 
 // NEW: Email API request
 export async function msg91EmailRequest(body: Record<string, any>) {
+  console.log('📧 Sending email request to MSG91:', {
+    domain: body.domain,
+    from: body.from,
+    to: body.to,
+    subject: body.subject,
+  });
+
   const response = await fetch('https://control.msg91.com/api/v5/email/send', {
     method: 'POST',
     headers: {
@@ -71,9 +78,15 @@ export async function msg91EmailRequest(body: Record<string, any>) {
   });
 
   const data = await response.json();
+  
+  console.log('📧 MSG91 Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    data: data,
+  });
 
   if (!response.ok) {
-    throw new Error(data.message || 'MSG91 Email API error');
+    throw new Error(JSON.stringify(data) || 'MSG91 Email API error');
   }
 
   return data;

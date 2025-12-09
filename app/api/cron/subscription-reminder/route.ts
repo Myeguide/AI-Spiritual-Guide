@@ -78,11 +78,13 @@ export async function GET(req: NextRequest) {
 
         // Send reminder emails
         for (const subscription of subscriptionsToRemind) {
+            // Store user info outside try-catch for error handling
+            const userEmail = subscription.user.email;
+            const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
+            
             try {
-                const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
-
                 await EmailService.sendSubscriptionExpiryReminder(
-                    subscription.user.email,
+                    userEmail,
                     userName || 'Valued User',
                     subscription.tier.name,
                     subscription.expiresAt!,
@@ -99,7 +101,7 @@ export async function GET(req: NextRequest) {
                 await prisma.emailLog.create({
                     data: {
                         userId: subscription.user.id,
-                        email: subscription.user.email,
+                        email: userEmail,
                         type: 'subscription_reminder',
                         subject: `Your ${subscription.tier.name} subscription expires in 5 days`,
                         status: 'sent',
@@ -111,11 +113,11 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.remindersSent++;
-                console.log(`Reminder sent to ${subscription.user.email}`);
+                console.log(`Reminder sent to ${userEmail}`);
             } catch (error: any) {
                 results.remindersFailed++;
-                results.errors.push(`Failed to send reminder to ${subscription.user.email}: ${error.message}`);
-                console.error(`Failed to send reminder to ${subscription.user.email}:`, error);
+                results.errors.push(`Failed to send reminder to ${userEmail}: ${error.message}`);
+                console.error(`Failed to send reminder to ${userEmail}:`, error);
             }
         }
 
@@ -154,11 +156,13 @@ export async function GET(req: NextRequest) {
         results.expiredProcessed = expiredSubscriptions.length;
 
         for (const subscription of expiredSubscriptions) {
+            // Store user info outside try-catch for error handling
+            const userEmail = subscription.user.email;
+            const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
+            
             try {
-                const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
-
                 await EmailService.sendSubscriptionExpiredNotification(
-                    subscription.user.email,
+                    userEmail,
                     userName || 'Valued User',
                     subscription.tier.name
                 );
@@ -176,7 +180,7 @@ export async function GET(req: NextRequest) {
                 await prisma.emailLog.create({
                     data: {
                         userId: subscription.user.id,
-                        email: subscription.user.email,
+                        email: userEmail,
                         type: 'subscription_expired',
                         subject: `Your ${subscription.tier.name} subscription has expired`,
                         status: 'sent',
@@ -187,9 +191,9 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.expiredNotificationsSent++;
-                console.log(`Expired notification sent to ${subscription.user.email}`);
+                console.log(`Expired notification sent to ${userEmail}`);
             } catch (error: any) {
-                results.errors.push(`Failed to send expired notification to ${subscription.user.email}: ${error.message}`);
+                results.errors.push(`Failed to send expired notification to ${userEmail}: ${error.message}`);
                 console.error(`Failed to send expired notification:`, error);
             }
         }
