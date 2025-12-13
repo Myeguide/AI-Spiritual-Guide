@@ -10,8 +10,9 @@ import { Button } from "./ui/button";
 import { Menu, MessageSquareMore } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { apiCall } from "@/utils/api-call";
+import { useNavigate } from "react-router";
 
 interface ChatProps {
   threadId: string;
@@ -20,7 +21,8 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
-
+  const logout = useUserStore((state) => state.logout);
+  const navigate = useNavigate();
 
   // Use ref to prevent race conditions between onResponse and onError
 
@@ -73,6 +75,31 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     },
   });
 
+  // Handle session expiration during chat
+  useEffect(() => {
+    if (error) {
+      try {
+        const parsed = JSON.parse(error.message);
+        // Check if error indicates session expired (401 Unauthorized)
+        if (parsed.error === "Invalid or expired token" || 
+            parsed.error === "Unauthorized - No token provided" ||
+            parsed.error === "Unauthorized - Invalid token") {
+          console.log("Session expired during chat, logging out...");
+          logout();
+          navigate("/chat");
+        }
+      } catch {
+        // Not a JSON error, check for common auth error messages
+        if (error.message.includes("Unauthorized") || 
+            error.message.includes("expired token") ||
+            error.message.includes("Invalid token")) {
+          console.log("Session expired during chat, logging out...");
+          logout();
+          navigate("/chat");
+        }
+      }
+    }
+  }, [error, logout, navigate]);
 
   const rateLimitError = error ? (() => {
     try {
