@@ -12,8 +12,23 @@ import MainLayout from "./MainLayout";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
-  const { user, token, fetchSubscription } = useUserStore();
+  const { user, token, fetchSubscription, verifySession, sessionChecked } = useUserStore();
   const authenticated = !!user && !!token;
+
+  // Verify session on app load - check if token is still valid
+  useEffect(() => {
+    const checkSession = async () => {
+      if (user && token && !sessionChecked) {
+        console.log("Verifying session...");
+        const isValid = await verifySession();
+        if (!isValid) {
+          console.log("Session expired, user has been logged out");
+        }
+      }
+    };
+
+    checkSession();
+  }, [user, token, sessionChecked, verifySession]);
 
   useEffect(() => {
     const initializeSync = async () => {
@@ -32,22 +47,28 @@ export default function App() {
     initializeSync();
   }, [authenticated, isSynced]);
 
-  // Handle online/visibility events
+  // Handle online/visibility events - also re-verify session
   useEffect(() => {
     if (!authenticated) return;
 
     const handleResync = () => setIsSynced(false);
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleResync();
+        // Re-verify session when tab becomes visible
+        verifySession();
+      }
+    };
 
     window.addEventListener("online", handleResync);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") handleResync();
-    });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("online", handleResync);
-      document.removeEventListener("visibilitychange", handleResync);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [authenticated]);
+  }, [authenticated, verifySession]);
 
   // Fetch subscription when authenticated
   useEffect(() => {

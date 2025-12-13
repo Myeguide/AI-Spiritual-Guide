@@ -11,6 +11,16 @@ export const apiCall = async (endpoint: string, method: string, body?: any) => {
         credentials: "include",
         body: JSON.stringify(body),
     });
+    
+    // Handle 401 Unauthorized - session expired
+    if (res.status === 401) {
+        console.log("Session expired during API call, logging out...");
+        useUserStore.getState().logout();
+        // Optionally redirect to login or let the app handle it
+        window.location.href = "/chat";
+        throw new Error("Session expired. Please login again.");
+    }
+    
     const data = await res.json();
 
     return data;

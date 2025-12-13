@@ -17,6 +17,7 @@ interface IAuth {
     subscription: SubscriptionInfo;
     subscriptionFetched: boolean;
     subscriptionLoading: boolean;
+    sessionChecked: boolean;
 
     setUser: (user: LoggedInUser) => void;
     updateUser: (udpates: Partial<LoggedInUser>) => void;
@@ -24,6 +25,7 @@ interface IAuth {
     setToken: (token: string | null) => void;
     setSubscription: (subscription: Partial<SubscriptionInfo>) => void;
     fetchSubscription: () => Promise<void>;
+    verifySession: () => Promise<boolean>;
     logout: () => void;
     isAuthenticated: () => boolean;
 }
@@ -42,6 +44,7 @@ export const useUserStore = create<IAuth>()(
             },
             subscriptionLoading: false,
             subscriptionFetched: false,
+            sessionChecked: false,
 
             setUser: (user: LoggedInUser) => {
                 const previousUserId = get().currentUserId;
@@ -92,6 +95,42 @@ export const useUserStore = create<IAuth>()(
                     console.error("Failed to fetch subscription:", error);
                 }finally{
                     set({ subscriptionLoading: false });
+                }
+            },
+
+            verifySession: async () => {
+                const { token, user } = get();
+                
+                // If no token or user, session is invalid
+                if (!token || !user) {
+                    set({ sessionChecked: true });
+                    return false;
+                }
+
+                try {
+                    const response = await fetch("/api/auth/verify", {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success && data.valid) {
+                        set({ sessionChecked: true });
+                        return true;
+                    } else {
+                        // Session expired or invalid - logout user
+                        console.log("Session expired or invalid, logging out...");
+                        get().logout();
+                        set({ sessionChecked: true });
+                        return false;
+                    }
+                } catch (error) {
+                    console.error("Failed to verify session:", error);
+                    // On network error, don't logout (might be offline)
+                    set({ sessionChecked: true });
+                    return true; // Assume valid if can't verify (offline support)
                 }
             },
 
