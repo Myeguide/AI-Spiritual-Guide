@@ -7,7 +7,7 @@ export const MSG91_CONFIG = {
   whatsappTemplateName: process.env.MSG91_WHATSAPP_TEMPLATE_NAME!,
   baseUrl: 'https://control.msg91.com/api/v5',
   whatsappBaseUrl: 'https://api.msg91.com/api/v5/whatsapp',
-  // NEW: Email configuration
+  // Email configuration
   emailDomain: process.env.MSG91_EMAIL_DOMAIN!,
   emailFrom: process.env.MSG91_EMAIL_FROM!,
   emailFromName: process.env.MSG91_EMAIL_FROM_NAME || 'EternalGuide',
@@ -59,14 +59,29 @@ export async function msg91WhatsAppRequest(
   return data;
 }
 
-// NEW: Email API request
-export async function msg91EmailRequest(body: Record<string, any>) {
-  console.log('📧 Sending email request to MSG91:', {
-    domain: body.domain,
-    from: body.from,
-    to: body.to,
-    subject: body.subject,
-  });
+// MSG91 Email API request - Using templates
+export async function msg91EmailRequest(params: {
+  templateId: string;
+  to: { email: string; name?: string }[];
+  variables: Record<string, string>;
+}) {
+  const requestBody = {
+    recipients: [
+      {
+        to: params.to.map(recipient => ({
+          email: recipient.email,
+          name: recipient.name || '',
+        })),
+        variables: params.variables,
+      },
+    ],
+    from: {
+      email: MSG91_CONFIG.emailFrom,
+      name: MSG91_CONFIG.emailFromName,
+    },
+    domain: MSG91_CONFIG.emailDomain,
+    template_id: params.templateId,
+  };
 
   const response = await fetch('https://control.msg91.com/api/v5/email/send', {
     method: 'POST',
@@ -74,19 +89,13 @@ export async function msg91EmailRequest(body: Record<string, any>) {
       'authkey': MSG91_CONFIG.authKey,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(requestBody),
   });
 
   const data = await response.json();
-  
-  console.log('📧 MSG91 Response:', {
-    status: response.status,
-    statusText: response.statusText,
-    data: data,
-  });
 
   if (!response.ok) {
-    throw new Error(JSON.stringify(data) || 'MSG91 Email API error');
+    throw new Error(data.message || JSON.stringify(data) || 'MSG91 Email API error');
   }
 
   return data;
