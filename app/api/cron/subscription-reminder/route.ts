@@ -45,7 +45,10 @@ export async function GET(req: NextRequest) {
         const endOfDay = new Date(fiveDaysFromNow);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // Find subscriptions expiring in exactly 5 days that haven't received reminder
+        // Find subscriptions expiring in exactly 5 days that haven't received reminder.
+        // Important: We intentionally do NOT include relational fields (user/tier) here.
+        // In production, it's possible to have orphaned rows (relationMode="prisma"),
+        // and Prisma will throw "Inconsistent query result" if a required relation resolves to null.
         const subscriptionsToRemind = await prisma.subscription.findMany({
             where: {
                 status: 'ACTIVE',
@@ -56,20 +59,11 @@ export async function GET(req: NextRequest) {
                 },
                 reminderSentAt: null, // Haven't sent reminder yet
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        email: true,
-                        firstName: true,
-                        lastName: true,
-                    },
-                },
-                tier: {
-                    select: {
-                        name: true,
-                    },
-                },
+            select: {
+                id: true,
+                userId: true,
+                tierId: true,
+                expiresAt: true,
             },
         });
 
@@ -79,12 +73,35 @@ export async function GET(req: NextRequest) {
         // Send reminder emails
         for (const subscription of subscriptionsToRemind) {
             try {
-                const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
+                const user = await prisma.user.findUnique({
+                    where: { id: subscription.userId },
+                    select: { id: true, email: true, firstName: true, lastName: true },
+                });
+
+                const tier = await prisma.subscriptionTier.findUnique({
+                    where: { id: subscription.tierId },
+                    select: { name: true },
+                });
+
+                if (!user || !tier) {
+                    results.remindersFailed++;
+                    results.errors.push(
+                        `Skipping reminder for subscription ${subscription.id}: missing ${!user ? 'user' : 'tier'} record`
+                    );
+                    console.warn(
+                        `Skipping reminder for subscription ${subscription.id}:`,
+                        { hasUser: !!user, hasTier: !!tier }
+                    );
+                    continue;
+                }
+
+                const userEmail = user.email;
+                const userName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
 
                 await EmailService.sendSubscriptionExpiryReminder(
-                    subscription.user.email,
+                    userEmail,
                     userName || 'Valued User',
-                    subscription.tier.name,
+                    tier.name,
                     subscription.expiresAt!,
                     5
                 );
@@ -98,10 +115,10 @@ export async function GET(req: NextRequest) {
                 // Log the email
                 await prisma.emailLog.create({
                     data: {
-                        userId: subscription.user.id,
-                        email: subscription.user.email,
+                        userId: user.id,
+                        email: userEmail,
                         type: 'subscription_reminder',
-                        subject: `Your ${subscription.tier.name} subscription expires in 5 days`,
+                        subject: `Your ${tier.name} subscription expires in 5 days`,
                         status: 'sent',
                         metadata: {
                             subscriptionId: subscription.id,
@@ -111,11 +128,11 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.remindersSent++;
-                console.log(`Reminder sent to ${subscription.user.email}`);
+                console.log(`Reminder sent to ${userEmail}`);
             } catch (error: any) {
                 results.remindersFailed++;
-                results.errors.push(`Failed to send reminder to ${subscription.user.email}: ${error.message}`);
-                console.error(`Failed to send reminder to ${subscription.user.email}:`, error);
+                results.errors.push(`Failed to send reminder for subscription ${subscription.id}: ${error.message}`);
+                console.error(`Failed to send reminder for subscription ${subscription.id}:`, error);
             }
         }
 
@@ -133,20 +150,10 @@ export async function GET(req: NextRequest) {
                 },
                 expiredEmailSent: false,
             },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        email: true,
-                        firstName: true,
-                        lastName: true,
-                    },
-                },
-                tier: {
-                    select: {
-                        name: true,
-                    },
-                },
+            select: {
+                id: true,
+                userId: true,
+                tierId: true,
             },
         });
 
@@ -155,12 +162,34 @@ export async function GET(req: NextRequest) {
 
         for (const subscription of expiredSubscriptions) {
             try {
-                const userName = `${subscription.user.firstName} ${subscription.user.lastName}`.trim();
+                const user = await prisma.user.findUnique({
+                    where: { id: subscription.userId },
+                    select: { id: true, email: true, firstName: true, lastName: true },
+                });
+
+                const tier = await prisma.subscriptionTier.findUnique({
+                    where: { id: subscription.tierId },
+                    select: { name: true },
+                });
+
+                if (!user || !tier) {
+                    results.errors.push(
+                        `Skipping expired notification for subscription ${subscription.id}: missing ${!user ? 'user' : 'tier'} record`
+                    );
+                    console.warn(
+                        `Skipping expired notification for subscription ${subscription.id}:`,
+                        { hasUser: !!user, hasTier: !!tier }
+                    );
+                    continue;
+                }
+
+                const userEmail = user.email;
+                const userName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
 
                 await EmailService.sendSubscriptionExpiredNotification(
-                    subscription.user.email,
+                    userEmail,
                     userName || 'Valued User',
-                    subscription.tier.name
+                    tier.name
                 );
 
                 // Mark subscription as expired and notification sent
@@ -175,10 +204,10 @@ export async function GET(req: NextRequest) {
                 // Log the email
                 await prisma.emailLog.create({
                     data: {
-                        userId: subscription.user.id,
-                        email: subscription.user.email,
+                        userId: user.id,
+                        email: userEmail,
                         type: 'subscription_expired',
-                        subject: `Your ${subscription.tier.name} subscription has expired`,
+                        subject: `Your ${tier.name} subscription has expired`,
                         status: 'sent',
                         metadata: {
                             subscriptionId: subscription.id,
@@ -187,10 +216,10 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.expiredNotificationsSent++;
-                console.log(`Expired notification sent to ${subscription.user.email}`);
+                console.log(`Expired notification sent to ${userEmail}`);
             } catch (error: any) {
-                results.errors.push(`Failed to send expired notification to ${subscription.user.email}: ${error.message}`);
-                console.error(`Failed to send expired notification:`, error);
+                results.errors.push(`Failed to send expired notification for subscription ${subscription.id}: ${error.message}`);
+                console.error(`Failed to send expired notification for subscription ${subscription.id}:`, error);
             }
         }
 
