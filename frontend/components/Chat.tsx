@@ -7,7 +7,7 @@ import { createMessage } from "@/frontend/dexie/queries";
 import ThemeToggler from "./ui/ThemeToggler";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { Menu, MessageSquareMore } from "lucide-react";
+import { Menu} from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { useEffect, useRef } from "react";
@@ -32,11 +32,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     closeNavigator,
     registerRef,
   } = useChatNavigator();
-
-  const errorSetRef = useRef<{
-    message: string;
-    details?: any;
-  } | null>(null);
 
  const {
     messages,
@@ -115,9 +110,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       };
     }
   })() : null;
-
-  console.log("error from useChat:", error);
-  console.log("parsed rateLimitError:", rateLimitError);
 
   return (
     <div className="relative w-full">
