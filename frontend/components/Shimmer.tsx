@@ -1,17 +1,17 @@
 function ShimmerCard() {
   return (
-    <div className="w-full max-w-md h-72 rounded-xl border border-gray-200 p-5 shadow-sm bg-white animate-pulse">
-      <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
-      <div className="h-8 w-20 bg-gray-200 rounded mb-6"></div>
+    <div className="w-full max-w-md h-72 rounded-xl border border-border p-5 shadow-sm bg-card animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded mb-4"></div>
+      <div className="h-8 w-20 bg-muted rounded mb-6"></div>
 
       <div className="space-y-3">
-        <div className="h-3 w-40 bg-gray-200 rounded"></div>
-        <div className="h-3 w-48 bg-gray-200 rounded"></div>
-        <div className="h-3 w-44 bg-gray-200 rounded"></div>
-        <div className="h-3 w-36 bg-gray-200 rounded"></div>
+        <div className="h-3 w-40 bg-muted rounded"></div>
+        <div className="h-3 w-48 bg-muted rounded"></div>
+        <div className="h-3 w-44 bg-muted rounded"></div>
+        <div className="h-3 w-36 bg-muted rounded"></div>
       </div>
 
-      <div className="h-10 w-full bg-gray-200 rounded-lg mt-6"></div>
+      <div className="h-10 w-full bg-muted rounded-lg mt-6"></div>
     </div>
   );
 }

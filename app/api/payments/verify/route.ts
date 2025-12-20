@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
 
         // Send WhatsApp welcome message for paid plans only
         try {
+            console.log("entered into whatsapp welcome message");
             const user = await prisma.user.findUnique({
                 where: { id: userId },
                 select: {

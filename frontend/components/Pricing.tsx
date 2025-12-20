@@ -21,6 +21,9 @@ import { Button } from "@/frontend/components/ui/button";
 import { Checkbox } from "@/frontend/components/ui/checkbox";
 import { Label } from "@/frontend/components/ui/label";
 import { CreditCard, Loader2 } from "lucide-react";
+import MobileNavTrigger from "./MobileNavTrigger";
+import MobileNavigator from "./MobileNavigator";
+
 
 declare global {
   interface Window {
@@ -29,6 +32,7 @@ declare global {
 }
 
 export default function PricingPage() {
+  const [isNavOpen, setIsNavOpen] = useState(false);
   const { user, fetchSubscription } = useUserStore();
   const { plans, isLoading: plansLoading } = usePlans();
   const {
@@ -268,12 +272,13 @@ export default function PricingPage() {
   const PRIMARY_COLOR = "#B500FF";
 
   return (
+
     <div
-      className="min-h-screen py-4 px-4"
-      style={{
-        background: `linear-gradient(to bottom right, ${PRIMARY_COLOR}10, white, ${PRIMARY_COLOR}10)`,
-      }}
+      className="min-h-screen py-4 px-4 bg-linear-to-br from-[#B500FF10] via-background to-[#B500FF10]"
     >
+      <MobileNavTrigger onClick={() => setIsNavOpen(true)} isOpen={isNavOpen} />
+      <MobileNavigator isVisible={isNavOpen} onClose={() => setIsNavOpen(false)} />
+
       <div className="mx-auto">
         {!subscription?.hasActiveSubscription && showExpiredMessage && (
           <div className="absolute w-full left-0 top-0 bg-red-100 dark:bg-red-900 dark:text-white text-red-800 px-4 py-2 text-sm font-medium">
@@ -287,12 +292,12 @@ export default function PricingPage() {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
             <span style={{ color: PRIMARY_COLOR }}>✦</span>
-            <span className="text-gray-600 text-sm font-medium">Pricing</span>
+            <span className="text-muted-foreground text-sm font-medium">Pricing</span>
           </div>
-          <h1 className="text-4xl md:text-4xl font-semibold text-gray-900 mb-4">
+          <h1 className="text-4xl md:text-4xl font-semibold text-foreground mb-4">
             Flexible pricing plans for every need
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
             Find the perfect plan—whether you're starting out or scaling up with
             advanced tools and premium support.
           </p>
@@ -347,15 +352,15 @@ export default function PricingPage() {
                         onClick={() => setSelectedPaymentMethodId(method.id)}
                         className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
                           selectedPaymentMethodId === method.id
-                            ? "border-purple-600 bg-purple-50"
-                            : "border-gray-200 hover:border-purple-300"
+                            ? "border-[#B500FF] bg-[#B500FF]/10"
+                            : "border-border hover:border-[#B500FF]/50"
                         }`}
                       >
                         <CreditCard
                           className={`w-5 h-5 ${
                             selectedPaymentMethodId === method.id
-                              ? "text-purple-600"
-                              : "text-gray-400"
+                              ? "text-[#B500FF]"
+                              : "text-muted-foreground"
                           }`}
                         />
                         <div className="flex-1">
@@ -363,13 +368,13 @@ export default function PricingPage() {
                             {method.displayInfo}
                           </p>
                           {method.nickname && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {method.nickname}
                             </p>
                           )}
                         </div>
                         {method.isDefault && (
-                          <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                          <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
                             Default
                           </span>
                         )}
@@ -393,7 +398,7 @@ export default function PricingPage() {
               </>
             ) : (
               <div className="text-center py-6">
-                <p className="text-gray-500 mb-4">No saved payment methods</p>
+                <p className="text-muted-foreground mb-4">No saved payment methods</p>
                 <Button onClick={() => proceedToPayment(selectedPlanType)}>
                   Add Payment Method
                 </Button>

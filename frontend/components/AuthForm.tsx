@@ -346,7 +346,7 @@ export default function AuthForm() {
                   id="accept-terms"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   required
                 />
                 <Label

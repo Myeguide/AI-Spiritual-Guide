@@ -31,25 +31,26 @@ export class WhatsAppService {
                 : phoneNumber;
 
             // Send template message (required for initiating conversation)
-            await msg91WhatsAppRequest('/send', {
+            await msg91WhatsAppRequest('/whatsapp-outbound-message/bulk/', {
                 integrated_number: MSG91_CONFIG.whatsappNumber,
                 content_type: 'template',
                 payload: {
-                    to: formattedNumber,
-                    type: 'template',
+                    messaging_product: "whatsapp",
+                    type: "template",
                     template: {
                         name: MSG91_CONFIG.whatsappTemplateName,
                         language: {
-                            code: 'en',
+                            code: 'en_US',
                             policy: 'deterministic',
                         },
-                        components: [
+                        namespace: "d43a42eb_491d_4cfb_b23d_21b106bd380c",
+                        to_and_components: [
                             {
-                                type: 'body',
-                                parameters: [
-                                    { type: 'text', text: userName },
-                                    { type: 'text', text: planName },
-                                ],
+                                to: formattedNumber,
+                                components: {
+                                    body_1: { type: 'text', text: userName },
+                                    body_2: { type: 'text', text: planName },
+                                }
                             },
                         ],
                     },
@@ -85,7 +86,7 @@ export class WhatsAppService {
                 ? phoneNumber.slice(1)
                 : phoneNumber;
 
-            await msg91WhatsAppRequest('/send', {
+            await msg91WhatsAppRequest('/whatsapp-outbound-message/bulk/', {
                 integrated_number: MSG91_CONFIG.whatsappNumber,
                 content_type: 'text',
                 payload: {
