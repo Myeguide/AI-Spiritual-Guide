@@ -27,7 +27,7 @@ export class EmailService {
         planName: string,
         expiryDate: Date,
         daysRemaining: number
-    ): Promise<void> {
+    ): Promise<unknown> {
         try {
             const formattedDate = expiryDate.toLocaleDateString('en-IN', {
                 weekday: 'long',
@@ -36,7 +36,7 @@ export class EmailService {
                 day: 'numeric',
             });
 
-            await msg91EmailRequest({
+            const providerResponse = await msg91EmailRequest({
                 templateId: EMAIL_TEMPLATES.SUBSCRIPTION_REMINDER,
                 to: [
                     {
@@ -53,6 +53,7 @@ export class EmailService {
             });
 
             console.log(`✅ Expiry reminder email sent to ${email}`);
+            return providerResponse;
         } catch (error: any) {
             console.error('❌ Email send error:', error);
             throw new EmailError(
@@ -70,9 +71,9 @@ export class EmailService {
         email: string,
         userName: string,
         planName: string
-    ): Promise<void> {
+    ): Promise<unknown> {
         try {
-            await msg91EmailRequest({
+            const providerResponse = await msg91EmailRequest({
                 templateId: EMAIL_TEMPLATES.SUBSCRIPTION_EXPIRED,
                 to: [
                     {
@@ -87,6 +88,7 @@ export class EmailService {
             });
 
             console.log(`✅ Expired notification email sent to ${email}`);
+            return providerResponse;
         } catch (error: any) {
             console.error('❌ Email send error:', error);
             throw new EmailError(

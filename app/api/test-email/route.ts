@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 5);
 
-        await EmailService.sendSubscriptionExpiryReminder(
+        const providerResponse = await EmailService.sendSubscriptionExpiryReminder(
             email,
             'Test User',
             'Premium',
@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
             success: true,
             message: `Test reminder email sent to ${email}`,
+            providerResponse,
         });
     } catch (error: any) {
         console.error('Failed to send test email:', error);
@@ -43,18 +44,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const { type = 'reminder', email = 'mdtarikhan007@gmail.com' } = await req.json();
+        let providerResponse: unknown;
 
         if (type === 'expired') {
-            await EmailService.sendSubscriptionExpiredNotification(email, 'Test User', 'Premium');
+            providerResponse = await EmailService.sendSubscriptionExpiredNotification(email, 'Test User', 'Premium');
         } else {
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + 5);
-            await EmailService.sendSubscriptionExpiryReminder(email, 'Test User', 'Premium', expiryDate, 5);
+            providerResponse = await EmailService.sendSubscriptionExpiryReminder(email, 'Test User', 'Premium', expiryDate, 5);
         }
 
         return NextResponse.json({
             success: true,
             message: `Test ${type} email sent to ${email}`,
+            providerResponse,
         });
     } catch (error: any) {
         console.error('Failed to send test email:', error);

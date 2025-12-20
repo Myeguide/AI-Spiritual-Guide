@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { EmailService } from '@/lib/services/email.service';
 
+// Ensure this route always runs server-side and is never cached.
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Verify cron secret to prevent unauthorized access
 function verifyCronSecret(req: NextRequest): boolean {
     const authHeader = req.headers.get('authorization');
@@ -139,14 +144,15 @@ export async function GET(req: NextRequest) {
         // === PART 2: Send expired notifications ===
         const now = new Date();
 
-        // Find subscriptions that just expired (within last 24 hours) and haven't received notification
+        // Find subscriptions that are overdue and haven't received notification.
+        // We intentionally do not limit this to the "last 24 hours" so we don't miss notifications
+        // if the cron job was down for a while.
         const expiredSubscriptions = await prisma.subscription.findMany({
             where: {
                 status: 'ACTIVE', // Still marked active but past expiry
                 planType: { not: 'free' },
                 expiresAt: {
                     lt: now,
-                    gte: new Date(now.getTime() - 24 * 60 * 60 * 1000), // Last 24 hours
                 },
                 expiredEmailSent: false,
             },
