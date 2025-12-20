@@ -85,15 +85,18 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // Increment request usage
-    await SubscriptionService.incrementRequestUsage(activeSubscription.id);
+    // Initialize OpenAI and prepare for streaming
+    // NOTE: We increment the request usage AFTER successful completion (in onFinish callback)
+    // instead of before streaming starts. This prevents 502 errors when streaming fails,
+    // as incrementing before streaming could cause the counter to increase even if the
+    // response never reaches the user due to server crashes or network issues.
     const openai = createOpenAI({
       apiKey: process.env.OPENAI_API_KEY!,
       compatibility: "strict"
     });
+    
+    // Get user memory and classify question
     const userMemory = await getMemorySummary(userId);
-
-    // Classify the question and get routed response
     const routedQuestion = await classifyQuestion(
       messages[messages.length - 1].content
     );
@@ -116,23 +119,43 @@ export async function POST(req: NextRequest) {
     ${userMemory || "No previous information about this user."}
   `;
 
+    // Track if request was counted to prevent double-counting
+    let requestCounted = false;
+
     const result = streamText({
       model: openai(MODEL_NAME),
       messages,
       onFinish: async ({ text: finalCompletion }) => {
-        console.log('on finish')
+        console.log('Stream finished successfully')
         try {
+          // Increment request usage only on successful completion
+          if (!requestCounted) {
+            // Verify subscription is still valid before incrementing
+            const currentSub = await SubscriptionService.getActiveSubscription(userId);
+            if (currentSub && currentSub.id === activeSubscription.id) {
+              await SubscriptionService.incrementRequestUsage(activeSubscription.id);
+              requestCounted = true;
+              console.log('Request usage incremented successfully');
+            } else {
+              console.warn('Subscription changed during streaming, not incrementing');
+            }
+          }
+          
+          // Update user memory
           await updateMemory({
             userId,
             lastUserMessage: messages[messages.length - 1].content,
             lastAssistantMessage: finalCompletion,
           });
         } catch (error) {
-          console.error('Failed to update memory:', error);
+          console.error('Failed to update memory or increment usage:', error);
+          // Even if memory update fails, we already counted the request
         }
       },
-      onError: (error) => {
+      onError: async (error) => {
         console.error('Streaming error:', error);
+        // Don't increment request count on error
+        requestCounted = false;
       },
       system: systemPrompt,
       experimental_transform: [smoothStream({ chunking: 'word' })],
@@ -150,21 +173,52 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Request error:', error);
 
-    // Check if it's a rate limit error
-    if (error instanceof Error && error.message.includes('rate limit')) {
-      return NextResponse.json(
-        {
-          error: 'Rate limit exceeded',
-          message: error.message
-        },
-        { status: 429 }
-      );
+    // Check if headers were already sent (streaming started)
+    // In that case, we can't send a JSON response
+    if (error instanceof Error) {
+      // Check if it's a rate limit error
+      if (error.message.includes('rate limit')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Rate limit exceeded',
+            message: 'OpenAI rate limit exceeded. Please try again in a moment.'
+          },
+          { status: 429 }
+        );
+      }
+
+      // Check if it's an OpenAI API error
+      if (error.message.includes('OpenAI') || error.message.includes('API')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'AI Service Error',
+            message: 'Unable to connect to AI service. Please try again later.'
+          },
+          { status: 503 }
+        );
+      }
+
+      // Check if it's a database error
+      if (error.message.includes('database') || error.message.includes('prisma')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Database Error',
+            message: 'Unable to access database. Please try again later.'
+          },
+          { status: 503 }
+        );
+      }
     }
 
+    // Generic error response
     return NextResponse.json(
       {
+        success: false,
         error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : 'Unknown error occurred'
+        message: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'
       },
       { status: 500 }
     );
