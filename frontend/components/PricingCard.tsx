@@ -45,7 +45,7 @@ export const PricingCard = ({
 
   return (
     <Card
-      className={`relative bg-white rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
+      className={`relative bg-card rounded-2xl shadow-lg border transition-all duration-300 hover:shadow-xl ${
         isCurrentPlan ? "ring-2 ring-green-500 border-green-500" : ""
       }`}
     >
@@ -98,7 +98,7 @@ export const PricingCard = ({
         <div className="mb-6">
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-bold">₹{plan.price}</span>
-            <span className="text-gray-500 text-sm ml-1">
+            <span className="text-muted-foreground text-sm ml-1">
               / {plan.totalRequests.toLocaleString()} Messages
             </span>
           </div>

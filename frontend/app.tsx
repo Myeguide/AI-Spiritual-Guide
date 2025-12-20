@@ -32,7 +32,6 @@ export default function App() {
 
   useEffect(() => {
     const initializeSync = async () => {
-      console.log("Initializing data sync...");
       if (!authenticated || isSynced) return;
 
       try {
