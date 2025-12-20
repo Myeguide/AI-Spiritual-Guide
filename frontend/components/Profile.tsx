@@ -33,6 +33,8 @@ import { PaymentMethodType } from "@/lib/generated/prisma";
 import { CreatePaymentMethodDTO } from "@/types/payment";
 import { toast } from "sonner";
 import { apiCall } from "@/utils/api-call";
+import MobileNavTrigger from "./MobileNavTrigger";
+import MobileNavigator from "./MobileNavigator";
 
 interface PasswordForm {
   oldPassword: string;
@@ -49,6 +51,7 @@ interface NewPaymentForm {
 }
 
 export default function UserProfile() {
+  const [isNavOpen, setIsNavOpen] = useState(false);
   const { user, updateUser } = useUserStore();
   const {
     paymentMethods,
@@ -329,6 +332,9 @@ export default function UserProfile() {
 
   return (
     <>
+    <MobileNavTrigger onClick={() => setIsNavOpen(true)} isOpen={isNavOpen} />
+    <MobileNavigator isVisible={isNavOpen} onClose={() => setIsNavOpen(false)} />
+      
       <div className="p-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
@@ -547,13 +553,13 @@ export default function UserProfile() {
                   <div>
                     <div className="pt-6 space-y-4">
                       {!isChangingPassword ? (
-                        <div className="flex items-center justify-between rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between rounded-lg p-4 bg-secondary">
                           <div>
                             <p className="font-medium flex items-center gap-2">
                               <Shield className="w-4 h-4 text-[#B500FF]" />
                               Password
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Keep your account secure
                             </p>
                           </div>
@@ -591,7 +597,7 @@ export default function UserProfile() {
                               <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility("old")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               >
                                 {showPasswords.old ? (
                                   <EyeOff className="w-4 h-4" />
@@ -626,7 +632,7 @@ export default function UserProfile() {
                               <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility("new")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               >
                                 {showPasswords.new ? (
                                   <EyeOff className="w-4 h-4" />
@@ -635,7 +641,7 @@ export default function UserProfile() {
                                 )}
                               </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Must be at least 8 characters with uppercase,
                               lowercase, and number
                             </p>
@@ -669,7 +675,7 @@ export default function UserProfile() {
                                 onClick={() =>
                                   togglePasswordVisibility("confirm")
                                 }
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                               >
                                 {showPasswords.confirm ? (
                                   <EyeOff className="w-4 h-4" />
@@ -760,7 +766,7 @@ export default function UserProfile() {
 
                       {/* Error State */}
                       {paymentMethodsError && (
-                        <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+                        <div className="p-4 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-lg text-sm">
                           {paymentMethodsError}
                         </div>
                       )}
@@ -771,7 +777,7 @@ export default function UserProfile() {
                         paymentMethods.map((method) => (
                           <div
                             key={method.id}
-                            className="p-4 border-2 border-[#B500FF] rounded-lg transition-colors hover:bg-gray-50"
+                            className="p-4 border-2 border-[#B500FF] rounded-lg transition-colors hover:bg-accent"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
@@ -787,12 +793,12 @@ export default function UserProfile() {
                                   )}
                                 </div>
                                 {method.nickname && (
-                                  <p className="text-sm text-gray-600">
+                                  <p className="text-sm text-muted-foreground">
                                     {method.nickname}
                                   </p>
                                 )}
                                 {method.cardExpMonth && method.cardExpYear && (
-                                  <p className="text-xs text-gray-500 mt-1">
+                                  <p className="text-xs text-muted-foreground mt-1">
                                     Expires: {method.cardExpMonth}/
                                     {method.cardExpYear.slice(-2)}
                                   </p>
@@ -827,8 +833,8 @@ export default function UserProfile() {
                         !paymentMethodsError &&
                         paymentMethods.length === 0 && (
                           <div className="text-center py-8">
-                            <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500 text-sm">
+                            <CreditCard className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+                            <p className="text-muted-foreground text-sm">
                               No payment methods saved yet
                             </p>
                           </div>
@@ -846,7 +852,7 @@ export default function UserProfile() {
                           Add Payment Method
                         </Button>
                       ) : (
-                        <div className="space-y-4 p-4 rounded-lg bg-gray-50">
+                        <div className="space-y-4 p-4 rounded-lg bg-secondary">
                           <div className="flex gap-2">
                             <Button
                               onClick={() => setNewPaymentType("card")}
@@ -878,8 +884,8 @@ export default function UserProfile() {
 
                           {newPaymentType === "card" ? (
                             <div className="space-y-3">
-                              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p className="text-xs text-blue-800 flex items-center gap-2">
+                              <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <p className="text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
                                   <Shield className="w-3 h-3" />
                                   Note: For security, full card details are not
                                   stored. Use Razorpay during checkout for
@@ -1006,7 +1012,7 @@ export default function UserProfile() {
                                 }
                                 className="mt-1"
                               />
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-muted-foreground mt-1">
                                 Enter your UPI ID (e.g., yourname@paytm)
                               </p>
                             </div>

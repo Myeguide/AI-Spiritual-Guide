@@ -185,15 +185,30 @@
   @apply !rounded-none;
 }
 
+/* Light mode phone input styles */
 .react-international-phone-input {
   border-radius: 0pc 8px 8px 0px;
-  background-color: #222222 !important;
-  border-color: #343434 !important;
-  color: #ffffff !important;
+  background-color: var(--background) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
 }
 
 .react-international-phone-country-selector-button {
-  background-color: #222222 !important;
-  border: 1px solid #343434 !important;
-  color: #ffffff !important;
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.react-international-phone-country-selector-dropdown {
+  background-color: var(--background) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.react-international-phone-country-selector-dropdown__list-item:hover {
+  background-color: var(--accent) !important;
+}
+
+.react-international-phone-country-selector-dropdown__list-item--focused {
+  background-color: var(--accent) !important;
 }
