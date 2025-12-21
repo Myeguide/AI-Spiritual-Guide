@@ -13,6 +13,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/frontend/components/ui/accordion";
+import { Link } from "react-router";
 
 export default function Footer() {
   return (
@@ -29,7 +30,6 @@ export default function Footer() {
         {/* Links */}
         <div className="grid grid-cols-2 gap-12">
           <div>
-            <h3 className="font-semibold text-lg mb-4 opacity-0">.</h3>
             <ul className="space-y-3">
               {/* Refund Policy Modal */}
               <li>
@@ -404,7 +404,7 @@ export default function Footer() {
               <li>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <button className="text-sm hover:underline">
+                    <button className="cursor-pointer">
                       Terms & Conditions
                     </button>
                   </DialogTrigger>
@@ -543,6 +543,11 @@ export default function Footer() {
                     </div>
                   </DialogContent>
                 </Dialog>
+              </li>
+
+              {/* Contact Us */}
+              <li>
+                <Link to="/contact">Contact Us</Link>
               </li>
             </ul>
           </div>
