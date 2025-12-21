@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { useUserStore } from "./stores/UserStore";
 import UserProfile from "@/frontend/components/Profile";
+import ContactPage from "@/frontend/components/Contact";
 import MainLayout from "./MainLayout";
 
 export default function App() {
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/" element={<Index />} />
           <Route path="/billing" element={<PricingPage />} />
           <Route path="/account" element={<UserProfile />} />
+          <Route path="/contact" element={<ContactPage />} />
         </Route>
 
         {/* Chat layout WITHOUT footer */}
