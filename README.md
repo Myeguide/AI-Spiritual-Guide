@@ -1,54 +1,86 @@
-# Chat0
+# AI Spiritual Guidance (SG) — Soul's Compass 🕊️
 
-Blazingly-Fast, Open-source, and Free AI Chat App.
+AI Spiritual Guidance is a high-performance, specialized SaaS platform designed to offer personalized, wisdom-driven answers to life's complex challenges. By combining the OpenAI engine with a custom spiritual context layer, the platform provides actionable guidance via Web and WhatsApp.
+<br>
+<br>
+## 🏗️ System Architecture & Engineering
+This project is built as a Turborepo Monorepo for maximum scalability and type-safety across the entire stack.
 
-## Features
+   * Hybrid Delivery : Dual-entry points (Web & WhatsApp) sharing a unified backend logic and database state.
 
-- Open Source
-- Privacy first (all data stored locally in your browser)
-- Bring your own API keys (we don't store them)
-- Chat Navigator - Easily Navigate to any message in the chat
-- Multi-model support - Google Gemini, OpenAI, DeepSeek and more will be added soon
-- Optimized React codebase (No Unnecessary re-renders)
+   * Webhook Orchestration: Robust handling of asynchronous events from Razorpay (payments) and MSG91 (WhatsApp messages).
 
-## 🤝 Contributing
+   * Serverless First: Optimized for deployment on Vercel/AWS Lambda with optimized cold-starts and edge-ready API routes.
+<br>
+<br>
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 🌟 Key Features
+### 🧠 Wisdom-Driven AI Engine
+   * Contextual Persona: Custom-tuned AI agent that balances psychological wellness with spiritual tradition.
 
-1. Fork the project
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+   * Streaming Responses: Real-time UI updates using Server-Sent Events (SSE) for a more human-like interaction.
+### 📱 Omnichannel Access
+   * Web Dashboard: Clean, minimalist UI built with Shadcn UI and Tailwind CSS.Database Setup
 
-## 💻 Running Locally
+   * WhatsApp Integration: Direct spiritual guidance via WhatsApp Business API, supporting session persistence across platforms.
+### 🔐 Secure, Passwordless Auth
+   * OTP-Based Login: Seamless user onboarding using mobile/email OTPs, reducing friction and increasing security.
 
-To run Chat0 locally, you'll need to follow these steps:
+   * JWT-State Management: Secure session handling across client and server components.
+### 💳 Subscription Management
+   * Tiered Access: Free, Monthly, and Yearly plans managed via Razorpay.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/senbo1/chat0.git
-   cd chat0
-   ```
+   * Automatic Provisioning: Immediate access grant upon successful payment webhook verification.
+<br>
 
-2. **Install dependencies:**
-   We use `pnpm` for package management.
-   ```bash
+## 🛠️ Tech Stack
+```
+   Framework                                  Next.js 15 (App Router), React.js
+   Language                                   TypeScript (Strict Mode)
+   Styling                                    Tailwind CSS, Shadcn UI, Lucide Icons
+   Database                                   PostgreSQL
+   ORM                                        Prisma
+   AI                                         OpenAI SDK
+   Payments                                   Razorpay Node.js SDK
+   Communication                              WhatsApp Business API (via MSG91)
+```
+<br>
+
+## 🚀 Getting Started
+   ### 1. Installation
+   ``` bash
+   git clone https://github.com/yourusername/ai-spiritual-guidance.git
+   cd ai-spiritual-guidance
    pnpm install
    ```
+      
+   ### 2. Environment Configuration
+   ``` bash
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/asig"
 
-3. **Run the development server:**
-   ```bash
-   pnpm dev
+# AI
+OPENAI_API_KEY="sk-..."
+
+# Payments
+RAZORPAY_KEY_ID="rzp_test_..."
+RAZORPAY_KEY_SECRET="your_secret"
+RAZORPAY_WEBHOOK_SECRET="your_webhook_secret"
+
+# Messaging
+MSG91_AUTH_KEY="your_key"
+WHATSAPP_NUMBER_ID="your_id"
    ```
 
-4. **Open your browser:**
-   Navigate to [http://localhost:3000](http://localhost:3000) to see the application in action.
+   ### 3. Database Setup
+   ```
+npx prisma migrate dev
+npx prisma generate
+   ```
 
-## 🐛 Issues & Support
+   ### 4. Development
+   ```
+pnpm dev
+   ```
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/senbo1/chat0/issues) on GitHub.
-
-## 💰 Buy me a coffee
-
-- [coff.ee/senbo](https://coff.ee/senbo)
+“Seek and you shall find; knock and the door shall be opened unto you.”
