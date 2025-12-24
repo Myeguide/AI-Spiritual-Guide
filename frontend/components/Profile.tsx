@@ -339,7 +339,7 @@ export default function UserProfile() {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-md font-bold mb-2">Account Settings</h1>
+            <h1 className="text-md font-bold mb-2 pl-8 lg:pl-0">Account Settings</h1>
             <hr />
           </div>
 

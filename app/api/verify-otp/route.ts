@@ -3,6 +3,7 @@ import { OTPService, OTPError } from '@/lib/services/otp.service';
 import { verifyOTPSchema } from '@/lib/validators/auth.validator';
 import { z } from 'zod';
 import { SMSService } from '@/lib/services/sms.service';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
     try {
@@ -20,6 +21,16 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Delete OTP record from database after successful verification
+        await prisma.otpCode.deleteMany({
+            where: {
+                phoneNumber,
+                code,
+                isUsed: false,
+                expiresAt: { gte: new Date() },
+            },
+        });
 
         return NextResponse.json({
             success: true,

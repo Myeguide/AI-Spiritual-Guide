@@ -220,7 +220,7 @@ function PureChatInput({
                       ? "Loading..."
                       : !subscription.hasActiveSubscription
                         ? "Please subscribe to send messages"
-                        : "Ask your questions"
+                        : "Ask Your Question"
                 }
                 disabled={subscriptionLoading || !subscriptionFetched}
                 className={cn(
