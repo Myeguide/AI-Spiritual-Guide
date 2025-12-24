@@ -20,7 +20,6 @@ export default function App() {
   useEffect(() => {
     const checkSession = async () => {
       if (user && token && !sessionChecked) {
-        console.log("Verifying session...");
         const isValid = await verifySession();
         if (!isValid) {
           console.log("Session expired, user has been logged out");

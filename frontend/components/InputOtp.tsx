@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+// @ts-ignore: module types incorrectly report missing 'useForm' export
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -6,7 +7,6 @@ import { Button } from "@/frontend/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,

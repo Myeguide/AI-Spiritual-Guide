@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OTPError, OTPService } from "@/lib/services/otp.service";
+import { OTPError } from "@/lib/services/otp.service";
 import { UserService } from "@/lib/services/user.service";
 import { registerSchema } from "@/lib/validators/auth.validator";
 import { cookies } from "next/headers";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { genSaltSync, hashSync } from "bcrypt-ts"
 import { calculateAge } from "@/utils/date-utils";
 import { SMSService } from "@/lib/services/sms.service";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,7 +18,24 @@ export async function POST(req: NextRequest) {
 
         // 🔐 Verify OTP
         try {
-            await SMSService.verifyOTPViaMSG91(phoneNumber, code);
+            const isValid = await SMSService.verifyOTPViaMSG91(phoneNumber, code);
+
+            if (!isValid) {
+                return NextResponse.json(
+                    { success: false, error: "Invalid or expired OTP" },
+                    { status: 401 }
+                );
+            }
+
+            // Delete OTP record from database after successful verification
+            await prisma.otpCode.deleteMany({
+                where: {
+                    phoneNumber,
+                    code,
+                    isUsed: false,
+                    expiresAt: { gte: new Date() },
+                },
+            });
         } catch (error) {
             if (error instanceof OTPError) {
                 return NextResponse.json(

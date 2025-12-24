@@ -23,6 +23,13 @@ import { apiCall } from "@/utils/api-call";
 import { toast } from "sonner";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { clearAllUserData } from "../dexie/queries";
+import { ChevronDownIcon } from "lucide-react";
+import { Calendar } from "@/frontend/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/frontend/components/ui/popover";
 
 export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
@@ -39,7 +46,6 @@ export default function AuthForm() {
   });
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
-  const [registerDob, setRegisterDob] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -48,6 +54,9 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(undefined);
 
   const isPasswordValid = (password: string) => {
     const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -90,10 +99,10 @@ export default function AuthForm() {
       } else {
         console.log("Login error response:", response);
         //error should be thrown be using  frontend but from backend it should come
-        toast.error(response.error||"Something went wrong during login" );
+        toast.error(response.error || "Something went wrong during login");
       }
     } catch (error) {
-    console.error(error);
+      console.error(error);
       toast.error("Login failed. Please try again.");
     } finally {
       setLoading(false);
@@ -102,12 +111,12 @@ export default function AuthForm() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!acceptedTerms) {
       toast.error("Please accept the terms and conditions to continue");
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -141,7 +150,7 @@ export default function AuthForm() {
         firstName={registerName.firstName}
         lastName={registerName.lastName}
         email={registerEmail}
-        dob={registerDob}
+        dob={date ? date.toISOString().split('T')[0] : ""}
         password={registerPassword}
         onVerified={() => setOtpVerified(true)}
       />
@@ -256,14 +265,33 @@ export default function AuthForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-dob">Date of Birth</Label>
-                <Input
-                  id="register-dob"
-                  type="date"
-                  value={registerDob}
-                  onChange={(e) => setRegisterDob(e.target.value)}
-                  required
-                />
+                <Label htmlFor="date">Date of Birth</Label>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      id="date"
+                      className="w-full justify-between font-normal border border-gray-200"
+                    >
+                      {date ? date.toLocaleDateString() : "Select date"}
+                      <ChevronDownIcon />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto overflow-hidden p-0"
+                    align="start"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      captionLayout="dropdown"
+                      onSelect={(selectedDate) => {
+                        setDate(selectedDate);
+                        setOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">

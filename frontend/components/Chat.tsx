@@ -23,6 +23,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use ref to prevent race conditions between onResponse and onError
 
@@ -33,7 +34,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     registerRef,
   } = useChatNavigator();
 
- const {
+  const {
     messages,
     input,
     status,
@@ -69,6 +70,13 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       Authorization: `Bearer ${userConfig}`,
     },
   });
+
+  // Auto-scroll to bottom when messages change or when streaming
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [messages, status]);
 
   // Handle session expiration during chat
   useEffect(() => {
@@ -115,7 +123,8 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     <div className="relative w-full">
       <ChatSidebarTrigger />
       <main
-        className={`flex flex-col w-full max-w-3xl pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out`}
+        ref={scrollContainerRef}
+        className={`flex flex-col w-full max-w-3xl pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out h-screen overflow-y-auto no-scrollbar`}
       >
         <Messages
           threadId={threadId}
@@ -127,6 +136,16 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
           registerRef={registerRef}
           stop={stop}
         />
+        {messages.length === 0 && (
+          <div className="flex-1 flex flex-col justify-center items-center text-center">
+            <h1 className="font-semibold text-foreground">
+              Your Questions, Timeless Answers
+            </h1>
+            <p className="text-muted-foreground">
+              Ask how to resolve a problem, get spiritual clarity and more
+            </p>
+          </div>
+        )}
         <ChatInput
           threadId={threadId}
           input={input}
