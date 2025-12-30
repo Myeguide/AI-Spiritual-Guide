@@ -59,7 +59,7 @@ export default function AuthForm() {
   const [date, setDate] = useState<Date | undefined>(undefined);
 
   const isPasswordValid = (password: string) => {
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
     return regex.test(password);
   };
 
@@ -97,7 +97,6 @@ export default function AuthForm() {
 
         return;
       } else {
-        console.log("Login error response:", response);
         //error should be thrown be using  frontend but from backend it should come
         toast.error(response.error || "Something went wrong during login");
       }
@@ -150,7 +149,12 @@ export default function AuthForm() {
         firstName={registerName.firstName}
         lastName={registerName.lastName}
         email={registerEmail}
-        dob={date ? date.toISOString().split('T')[0] : ""}
+        dob={date ? (() => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })() : ""}
         password={registerPassword}
         onVerified={() => setOtpVerified(true)}
       />
@@ -200,6 +204,7 @@ export default function AuthForm() {
                     placeholder="Enter password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
+                    autoComplete="off"
                     required
                   />
 
@@ -315,6 +320,7 @@ export default function AuthForm() {
                     placeholder="Enter password"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
+                    autoComplete="off"
                     required
                   />
                   <Button
@@ -347,6 +353,7 @@ export default function AuthForm() {
                     placeholder="Confirm password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="off"
                     required
                   />
                   <Button

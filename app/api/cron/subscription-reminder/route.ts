@@ -72,7 +72,6 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        console.log(`Found ${subscriptionsToRemind.length} subscriptions expiring in 5 days`);
         results.remindersProcessed = subscriptionsToRemind.length;
 
         // Send reminder emails
@@ -133,7 +132,6 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.remindersSent++;
-                console.log(`Reminder sent to ${userEmail}`);
             } catch (error: any) {
                 results.remindersFailed++;
                 results.errors.push(`Failed to send reminder for subscription ${subscription.id}: ${error.message}`);
@@ -163,7 +161,6 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        console.log(`Found ${expiredSubscriptions.length} recently expired subscriptions`);
         results.expiredProcessed = expiredSubscriptions.length;
 
         for (const subscription of expiredSubscriptions) {
@@ -222,7 +219,6 @@ export async function GET(req: NextRequest) {
                 });
 
                 results.expiredNotificationsSent++;
-                console.log(`Expired notification sent to ${userEmail}`);
             } catch (error: any) {
                 results.errors.push(`Failed to send expired notification for subscription ${subscription.id}: ${error.message}`);
                 console.error(`Failed to send expired notification for subscription ${subscription.id}:`, error);

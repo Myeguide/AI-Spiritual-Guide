@@ -5,6 +5,7 @@ import { PaymentMethodType } from '@/lib/generated/prisma';
 // Plan types (not in Prisma enum, so we define here)
 export enum PlanType {
   FREE = 'free',
+  ONETIME = 'one-time',
   MONTHLY = 'premium-monthly',
   ANNUALLY = 'premium-yearly',
 }

@@ -28,6 +28,10 @@ export const planExtras = [
     planType: PlanType.FREE,
     icon: "users",
   },
+  {
+    planType: PlanType.ONETIME,
+    icon: "repeat",
+  }
 ];
 
 export interface Subscription {

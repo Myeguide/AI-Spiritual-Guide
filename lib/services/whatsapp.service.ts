@@ -63,7 +63,6 @@ export class WhatsAppService {
                 data: { whatsappEnabled: true },
             });
 
-            console.log(`WhatsApp welcome message sent to ${phoneNumber}`);
         } catch (error: any) {
             console.error('WhatsApp welcome message error:', error);
             throw new WhatsAppError(
@@ -98,7 +97,6 @@ export class WhatsAppService {
                 },
             });
 
-            console.log(`WhatsApp reply sent to ${phoneNumber}`);
         } catch (error: any) {
             console.error('WhatsApp reply error:', error);
             throw new WhatsAppError(

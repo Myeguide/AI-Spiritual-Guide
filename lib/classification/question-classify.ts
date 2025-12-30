@@ -6,15 +6,8 @@ export async function classifyQuestion(question: string): Promise<Classification
         // STEP 1: Try rule-based classification
         let classification = intelligentClassify(question);
 
-        console.log("Rule-based classification:", {
-            type: classification.type,
-            confidence: classification.confidence,
-            keywords: classification.keywords
-        });
-
         // STEP 2: If low confidence or empty type, use LLM
         if (!classification.type || classification.confidence < 0.7) {
-            console.log("Low confidence, using LLM fallback...");
             const llmResult = await llmClassify(question);
 
             classification = {

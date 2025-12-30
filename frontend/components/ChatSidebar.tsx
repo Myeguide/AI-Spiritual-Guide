@@ -19,6 +19,7 @@ import { Button, buttonVariants } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import AuthForm from "./AuthForm";
 import { useUserStore } from "@/frontend/stores/UserStore";
+import { useSubscriptionStore } from "@/frontend/stores/SubscriptionStore";
 import { NavUser } from "./NavUser";
 import { apiCall } from "@/utils/api-call";
 import { db } from "../dexie/db";
@@ -136,6 +137,11 @@ function PureHeader() {
 const Header = memo(PureHeader);
 const PureFooter = () => {
   const { isAuthenticated } = useUserStore();
+  const { subscription } = useSubscriptionStore();
+  const navigate = useNavigate();
+
+  const isOnFreePlan = subscription?.subscription?.planType === 'free';
+
   return (
     <SidebarFooter>
       {!isAuthenticated() ? (
@@ -149,7 +155,17 @@ const PureFooter = () => {
           </DialogContent>
         </Dialog>
       ) : (
-        <NavUser />
+        <div className="space-y-2">
+          {isOnFreePlan && (
+            <Button
+              onClick={() => navigate("/billing")}
+              className="w-full bg-[#B500FF] text-white hover:bg-[#B500FF]/90"
+            >
+              Upgrade Plan
+            </Button>
+          )}
+          <NavUser />
+        </div>
       )}
     </SidebarFooter>
   );

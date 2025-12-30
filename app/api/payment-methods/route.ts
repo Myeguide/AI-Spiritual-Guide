@@ -21,10 +21,8 @@ export async function GET(req: NextRequest) {
         const { userId } = auth;
 
         const paymentMethods = await PaymentService.getUserPaymentMethods(userId);
-        console.log('Payment Methods:', paymentMethods);
 
         const defaultMethod = await PaymentService.getDefaultPaymentMethod(userId);
-        console.log('Default Payment Method:', defaultMethod);
 
         return NextResponse.json<ApiResponse>({
             success: true,

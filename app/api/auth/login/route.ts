@@ -20,6 +20,7 @@ interface UserResponse {
     phoneNumber: string;
     email: string | null;
     age: number | null;
+    dob: string | null;
 }
 
 interface LoginSuccessResponse {
@@ -294,7 +295,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<LoginResponse
 
         // Step 4: Create session
         const sessionToken = await createSession(user.id, user.age, phoneNumber);
-        return createSuccessResponse(sessionToken, user);
+
+        // Map user to API response shape (serialize dob to ISO string)
+        const userResponse: UserResponse = {
+            id: user.id,
+            firstName: user.firstName ?? null,
+            lastName: user.lastName ?? null,
+            phoneNumber: user.phoneNumber,
+            email: user.email ?? null,
+            age: user.age ?? null,
+            dob: user.dob instanceof Date ? user.dob.toISOString() : (user.dob ?? null),
+        };
+
+        return createSuccessResponse(sessionToken, userResponse);
 
     } catch (error) {
 

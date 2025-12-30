@@ -4,7 +4,7 @@ export type LoggedInUser = {
     lastName: string;
     email: string;
     age?: number;
-    dob: "yyyy-MM-dd";
+    dob: string;
     phoneNumber?: string;
     password: string;
     avatar?: string;

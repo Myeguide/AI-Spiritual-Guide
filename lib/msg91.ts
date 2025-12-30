@@ -41,7 +41,6 @@ export async function msg91WhatsAppRequest(
   endpoint: string,
   body: Record<string, any>
 ) {
-  console.log("whatsapp request api", `${MSG91_CONFIG.whatsappBaseUrl}${endpoint}`)
   const response = await fetch(`${MSG91_CONFIG.whatsappBaseUrl}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -53,7 +52,6 @@ export async function msg91WhatsAppRequest(
   });
 
   const data = await response.json();
-  console.log('WhatsApp API Response:', data);
 
   if (!response.ok) {
     throw new Error(data.message || 'MSG91 WhatsApp API error');

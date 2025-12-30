@@ -12,12 +12,20 @@ export async function PATCH(req: NextRequest) {
         const { userId } = auth;
 
         const body = await req.json();
-        const { firstName, lastName } = body;
+        const { firstName, lastName, email, dob } = body;
 
         // Validate required fields
         if (!firstName || !lastName) {
             return NextResponse.json<ApiResponse>(
                 { success: false, error: 'First name and last name are required' },
+                { status: 400 }
+            );
+        }
+
+        // Validate email format if provided
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return NextResponse.json<ApiResponse>(
+                { success: false, error: 'Invalid email format' },
                 { status: 400 }
             );
         }
@@ -28,6 +36,8 @@ export async function PATCH(req: NextRequest) {
             data: {
                 firstName,
                 lastName,
+                ...(email && { email }),
+                ...(dob && { dob: new Date(dob) }),
             },
             select: {
                 id: true,

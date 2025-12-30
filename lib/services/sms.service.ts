@@ -34,7 +34,6 @@ export class SMSService {
         );
       }
 
-      console.log(`Phone validation successful: ${lookup.phoneNumber}`);
     } catch (error: any) {
       // Handle Twilio Lookup errors
       if (error.code) {
@@ -153,7 +152,6 @@ export class SMSService {
         otp: code, // Send your generated OTP
       });
 
-      console.log(`OTP sent successfully via MSG91:`, response);
     } catch (error: any) {
       console.error('MSG91 OTP error:', error);
       throw new SMSError(
