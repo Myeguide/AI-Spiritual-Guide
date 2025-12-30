@@ -52,7 +52,6 @@ export class EmailService {
                 },
             });
 
-            console.log(`✅ Expiry reminder email sent to ${email}`);
             return providerResponse;
         } catch (error: any) {
             console.error('❌ Email send error:', error);
@@ -87,7 +86,6 @@ export class EmailService {
                 },
             });
 
-            console.log(`✅ Expired notification email sent to ${email}`);
             return providerResponse;
         } catch (error: any) {
             console.error('❌ Email send error:', error);

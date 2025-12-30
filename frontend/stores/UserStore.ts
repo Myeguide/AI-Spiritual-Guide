@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { LoggedInUser } from "@/types/user";
 import { clearAllUserData } from "../dexie/queries";
+import { useSubscriptionStore } from "./SubscriptionStore";
 
 interface SubscriptionInfo {
     hasActiveSubscription: boolean;
@@ -90,6 +91,9 @@ export const useUserStore = create<IAuth>()(
                             },
                              subscriptionFetched: true,
                         });
+
+                        // Also update the subscription store with full subscription data
+                        useSubscriptionStore.getState().setSubscription(data.data);
                     }
                 } catch (error) {
                     console.error("Failed to fetch subscription:", error);
@@ -121,7 +125,6 @@ export const useUserStore = create<IAuth>()(
                         return true;
                     } else {
                         // Session expired or invalid - logout user
-                        console.log("Session expired or invalid, logging out...");
                         get().logout();
                         set({ sessionChecked: true });
                         return false;

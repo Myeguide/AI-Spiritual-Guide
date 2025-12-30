@@ -91,6 +91,7 @@ export class UserService {
                 phoneNumber: true,
                 email: true,
                 age: true,
+                dob: true,
                 password: true,
             }
         });

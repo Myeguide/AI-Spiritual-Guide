@@ -34,7 +34,7 @@ export default function Footer() {
               {/* Refund Policy Modal */}
               <li>
                 <Dialog>
-                  <DialogTrigger className="cursor-pointer">
+                  <DialogTrigger className="cursor-pointer text-sm md:text-base">
                     Refund Policy
                   </DialogTrigger>
 
@@ -154,7 +154,7 @@ export default function Footer() {
               {/* Privacy Policy Modal */}
               <li>
                 <Dialog>
-                  <DialogTrigger className="cursor-pointer">
+                  <DialogTrigger className="cursor-pointer text-sm md:text-base">
                     Privacy Policy
                   </DialogTrigger>
 
@@ -404,7 +404,7 @@ export default function Footer() {
               <li>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <button className="cursor-pointer">
+                    <button className="cursor-pointer text-sm md:text-base">
                       Terms & Conditions
                     </button>
                   </DialogTrigger>
@@ -547,7 +547,7 @@ export default function Footer() {
 
               {/* Contact Us */}
               <li>
-                <Link to="/contact">Contact Us</Link>
+                <Link to="/contact" className="text-sm md:text-base">Contact Us</Link>
               </li>
             </ul>
           </div>

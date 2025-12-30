@@ -26,7 +26,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Use ref to prevent race conditions between onResponse and onError
-
   const {
     isNavigatorVisible,
     handleToggleNavigator,
@@ -87,7 +86,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         if (parsed.error === "Invalid or expired token" || 
             parsed.error === "Unauthorized - No token provided" ||
             parsed.error === "Unauthorized - Invalid token") {
-          console.log("Session expired during chat, logging out...");
           logout();
           navigate("/chat");
         }
@@ -96,7 +94,6 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         if (error.message.includes("Unauthorized") || 
             error.message.includes("expired token") ||
             error.message.includes("Invalid token")) {
-          console.log("Session expired during chat, logging out...");
           logout();
           navigate("/chat");
         }
@@ -142,7 +139,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
               Your Questions, Timeless Answers
             </h1>
             <p className="text-muted-foreground">
-              Ask how to resolve a problem, get spiritual clarity and more
+              Ask how to resolve a problem, get spiritual clarity and more. The more content you give, the more personalized the guidance
             </p>
           </div>
         )}

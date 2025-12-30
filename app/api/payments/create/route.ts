@@ -136,13 +136,11 @@ export async function POST(req: NextRequest) {
         let customerId: string | null = null;
         try {
             customerId = await getOrCreateCustomerId(userId);
-            console.log('✅ Customer ID obtained:', customerId);
         } catch (error) {
             console.error('⚠️ Failed to create customer, continuing without it', error);
             // Continue without customer - single payment mode
             customerId = '';
         }
-        console.log(tier);
         // Create Razorpay order
         const order = await createRazorpayOrder(
             {

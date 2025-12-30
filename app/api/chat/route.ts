@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
 
     // Check remaining requests
     const requestsRemaining = activeSubscription.totalRequests - activeSubscription.requestsUsed;
-    console.log("active subscripiton",activeSubscription)
     if (requestsRemaining <= 0) {
       await SubscriptionService.markAsExpired(activeSubscription.id);
       return NextResponse.json({
@@ -126,7 +125,6 @@ export async function POST(req: NextRequest) {
       model: openai(MODEL_NAME),
       messages,
       onFinish: async ({ text: finalCompletion }) => {
-        console.log('Stream finished successfully')
         try {
           // Increment request usage only on successful completion
           if (!requestCounted) {
@@ -135,7 +133,6 @@ export async function POST(req: NextRequest) {
             if (currentSub && currentSub.id === activeSubscription.id) {
               await SubscriptionService.incrementRequestUsage(activeSubscription.id);
               requestCounted = true;
-              console.log('Request usage incremented successfully');
             } else {
               console.warn('Subscription changed during streaming, not incrementing');
             }

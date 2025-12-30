@@ -306,7 +306,7 @@ export default function PricingPage() {
         {plansLoading ? (
           <ShimmerPricingScreen />
         ) : (
-          <div className="grid gap-6 max-w-6xl mx-auto md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 mx-auto md:grid-cols-2 lg:grid-cols-4">
             {plans?.map((plan) => (
               <PricingCard
                 key={plan.type}

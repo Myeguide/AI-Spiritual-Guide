@@ -3,7 +3,6 @@ const { PrismaClient } = require("../lib/generated/prisma");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting seed...");
   
   const result = await prisma.subscriptionTier.createMany({
     data: [
@@ -81,8 +80,6 @@ async function main() {
     ],
     skipDuplicates: true
   });
-  
-  console.log(`✔ Seed completed! Created ${result.count} subscription tiers.`);
 }
 
 main()

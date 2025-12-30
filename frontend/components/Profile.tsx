@@ -25,6 +25,7 @@ import {
   Loader2,
   Lock,
   Shield,
+  LoaderCircle,
 } from "lucide-react";
 import { LoggedInUser } from "@/types/user";
 import { useUserStore } from "@/frontend/stores/UserStore";
@@ -35,6 +36,13 @@ import { toast } from "sonner";
 import { apiCall } from "@/utils/api-call";
 import MobileNavTrigger from "./MobileNavTrigger";
 import MobileNavigator from "./MobileNavigator";
+import { ChevronDownIcon } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/frontend/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/frontend/components/ui/popover";
 
 interface PasswordForm {
   oldPassword: string;
@@ -87,15 +95,23 @@ export default function UserProfile() {
   const [newPayment, setNewPayment] = useState<NewPaymentForm>({});
   const [addingPaymentLoading, setAddingPaymentLoading] = useState(false);
 
+  const [openDob, setOpenDob] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const handlePersonalEdit = () => {
     setIsEditingPersonal(true);
     setTempProfile(profile);
   };
 
   const handleSavePersonal = async () => {
+    setLoading(true);
     try {
       // Make API call to update user profile
-      const response = await apiCall("/api/user/update-profile", "PATCH", tempProfile);
+      const response = await apiCall(
+        "/api/user/update-profile",
+        "PATCH",
+        tempProfile
+      );
 
       if (response.success) {
         setProfile(tempProfile);
@@ -108,6 +124,8 @@ export default function UserProfile() {
     } catch (error: any) {
       console.error("Error updating profile:", error);
       toast.error(error.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -332,14 +350,19 @@ export default function UserProfile() {
 
   return (
     <>
-    <MobileNavTrigger onClick={() => setIsNavOpen(true)} isOpen={isNavOpen} />
-    <MobileNavigator isVisible={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      
+      <MobileNavTrigger onClick={() => setIsNavOpen(true)} isOpen={isNavOpen} />
+      <MobileNavigator
+        isVisible={isNavOpen}
+        onClose={() => setIsNavOpen(false)}
+      />
+
       <div className="p-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-md font-bold mb-2 pl-8 lg:pl-0">Account Settings</h1>
+            <h1 className="text-md font-bold mb-2 pl-8 lg:pl-0">
+              Account Settings
+            </h1>
             <hr />
           </div>
 
@@ -433,8 +456,10 @@ export default function UserProfile() {
                         id="editEmail"
                         type="email"
                         value={tempProfile?.email || ""}
-                        disabled={true}
-                        className="mt-1 border-0"
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        className="mt-1"
                       />
                     </div>
                     <div>
@@ -456,27 +481,64 @@ export default function UserProfile() {
                     <Label htmlFor="editDob" className="text-sm font-medium">
                       Date of Birth
                     </Label>
-                    <Input
-                      id="editDob"
-                      type="date"
-                      value={
-                        tempProfile?.dob
-                          ? new Date(tempProfile.dob)
-                              .toISOString()
-                              .split("T")[0]
-                          : ""
-                      }
-                      disabled={true}
-                      className="mt-1 border-0"
-                    />
+                    <Popover open={openDob} onOpenChange={setOpenDob}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          id="editDob"
+                          className="w-full justify-between font-normal border border-gray-200 mt-1"
+                        >
+                          {tempProfile?.dob
+                            ? new Date(tempProfile.dob).toLocaleDateString()
+                            : "Select date"}
+                          <ChevronDownIcon />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto overflow-hidden p-0"
+                        align="start"
+                      >
+                        <CalendarComponent
+                          mode="single"
+                          selected={
+                            tempProfile?.dob
+                              ? new Date(tempProfile.dob)
+                              : undefined
+                          }
+                          captionLayout="dropdown"
+                          onSelect={(selectedDate) => {
+                            if (selectedDate) {
+                              // Format date as YYYY-MM-DD without timezone conversion
+                              const year = selectedDate.getFullYear();
+                              const month = String(
+                                selectedDate.getMonth() + 1
+                              ).padStart(2, "0");
+                              const day = String(
+                                selectedDate.getDate()
+                              ).padStart(2, "0");
+                              const formattedDate = `${year}-${month}-${day}`;
+
+                              handleInputChange("dob", formattedDate);
+                              setOpenDob(false);
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button
                       onClick={handleSavePersonal}
-                      className="bg-[#B500FF]"
+                      className="bg-[#B500FF] w-36"
                     >
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                      {loading ? (
+                        <LoaderCircle className="animate-spin" />
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
                     </Button>
                     <Button onClick={handleCancel} variant="outline">
                       <X className="w-4 h-4 mr-2" />
@@ -514,7 +576,16 @@ export default function UserProfile() {
                       <Calendar className="w-4 h-4 text-[#B500FF]" />
                       <p className="font-medium">
                         {profile?.dob
-                          ? new Date(profile.dob).toLocaleDateString()
+                          ? (() => {
+                              try {
+                                return new Date(
+                                  profile.dob
+                                ).toLocaleDateString();
+                              } catch (e) {
+                                console.error("DOB parsing error:", e);
+                                return "Invalid date";
+                              }
+                            })()
                           : "Not set"}
                       </p>
                     </div>

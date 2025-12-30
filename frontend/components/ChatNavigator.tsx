@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
 import AuthForm from "./AuthForm";
 import { NavUser } from "./NavUser";
 import { cn } from "@/lib/utils";
+import { useSubscriptionStore } from "@/frontend/stores/SubscriptionStore";
 
 interface MessageNavigatorProps {
   threadId: string;
@@ -100,6 +101,10 @@ export default memo(PureChatNavigator, (prevProps, nextProps) => {
 
 const PureFooter = () => {
   const { isAuthenticated } = useUserStore();
+  const { subscription } = useSubscriptionStore();
+  const navigate = useNavigate();
+
+  const isOnFreePlan = subscription?.subscription?.planType === "free";
   return (
     <SidebarFooter>
       {!isAuthenticated() ? (
@@ -113,7 +118,17 @@ const PureFooter = () => {
           </DialogContent>
         </Dialog>
       ) : (
-        <NavUser />
+        <div className="space-y-2">
+          {isOnFreePlan && (
+            <Button
+              onClick={() => navigate("/billing")}
+              className="w-full bg-[#B500FF] text-white hover:bg-[#B500FF]/90"
+            >
+              Upgrade Plan
+            </Button>
+          )}
+          <NavUser />
+        </div>
       )}
     </SidebarFooter>
   );

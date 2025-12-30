@@ -61,7 +61,6 @@ export async function createRazorpayOrder(
 
         if (customerId) {
             orderOptions.customer_id = customerId;
-            console.log('💳 Order will use customer_id for saved cards:', customerId);
         }
 
         const order = await razorpay.orders.create(orderOptions);
@@ -427,7 +426,6 @@ export async function createOrGetCustomer(user: any): Promise<any> {
 
         let customerId = (user as any).razorpayCustomerId;
         if (!customerId) {
-            console.log('📋 Creating new Razorpay customer...');
 
             // Create customer in Razorpay
             const razorpay = getRazorpayInstance();
@@ -441,12 +439,6 @@ export async function createOrGetCustomer(user: any): Promise<any> {
             });
 
             customerId = customer.id;
-
-            console.log('✅ Razorpay customer created:', {
-                customerId,
-                email: existingCustomer.email,
-                name: `${existingCustomer.firstName} ${existingCustomer.lastName}`,
-            });
 
             // Save customer ID to database if your schema supports it
             // For now, we'll store it in a separate table

@@ -103,7 +103,6 @@ export async function POST(req: NextRequest) {
         // Handle specific Prisma errors
         if (error.code === "P2002") {
             // Unique constraint violation (duplicate message ID)
-            console.log("[Messages] ⚠️ Duplicate message attempt");
             return NextResponse.json(
                 { success: false, error: "Message already exists" },
                 { status: 409 }
