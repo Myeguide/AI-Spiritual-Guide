@@ -16,7 +16,7 @@ import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 import { useUserStore } from "@/frontend/stores/UserStore";
-import { LoaderCircle, MessageSquare, Eye, EyeOff } from "lucide-react";
+import { LoaderCircle, MessageSquare, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { PhoneInput } from "react-international-phone";
 import InputOTPForm from "@/frontend/components/InputOtp";
 import { apiCall } from "@/utils/api-call";
@@ -30,10 +30,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/frontend/components/ui/popover";
+import ForgotPasswordForm from "./ForgotPasswordForm";
 
 export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Login state
   const [loginPhone, setLoginPhone] = useState("");
@@ -161,6 +163,40 @@ export default function AuthForm() {
     );
   }
 
+  // Show forgot password form
+  if (showForgotPassword) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowForgotPassword(false)}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <CardTitle>Reset Password</CardTitle>
+          </div>
+          <CardDescription>
+            Enter your registered phone number to receive an OTP and reset your password.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ForgotPasswordForm
+            onSuccess={() => {
+              setShowForgotPassword(false);
+              setActiveTab("login");
+              toast.success("Password reset successfully! Please login with your new password.");
+            }}
+            onCancel={() => setShowForgotPassword(false)}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -221,6 +257,15 @@ export default function AuthForm() {
               <Button type="submit" className="w-full bg-[#B500FF]">
                 {loading ? <LoaderCircle className="animate-spin" /> : "Login"}
               </Button>
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm text-primary hover:text-primary/80 underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </form>
           </TabsContent>
 
