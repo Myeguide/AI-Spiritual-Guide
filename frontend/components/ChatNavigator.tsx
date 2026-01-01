@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { memo } from "react";
-import { MessageCirclePlus } from "lucide-react";
+import { memo, useState } from "react";
+import { Ellipsis, MessageCirclePlus, Share2, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { db } from "../dexie/db";
 import { useNavigate, useParams } from "react-router";
@@ -11,6 +11,13 @@ import AuthForm from "./AuthForm";
 import { NavUser } from "./NavUser";
 import { cn } from "@/lib/utils";
 import { useSubscriptionStore } from "@/frontend/stores/SubscriptionStore";
+import { deleteThread } from "../dexie/queries";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface MessageNavigatorProps {
   threadId: string;
@@ -21,10 +28,27 @@ interface MessageNavigatorProps {
 function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [sharedThreadId, setSharedThreadId] = useState<string | null>(null);
   const threads = useLiveQuery(
     () => db.threads.orderBy("lastMessageAt").reverse().toArray(),
     []
   );
+
+  const handleShareThread = (threadId: string) => {
+    const shareUrl = `${window.location.origin}/chat/${threadId}`;
+    navigator.clipboard.writeText(shareUrl);
+    setSharedThreadId(threadId);
+    setTimeout(() => {
+      setSharedThreadId(null);
+    }, 2000);
+  };
+
+  const handleDeleteThread = async (threadId: string) => {
+    await deleteThread(threadId);
+    if (id === threadId) {
+      navigate("/chat");
+    }
+  };
 
   return (
     <>
@@ -64,23 +88,71 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
           </div>
 
           <div className="flex-1 overflow-hidden p-2">
-            <ul className="flex flex-col gap-2 px-4 py-2 prose prose-sm dark:prose-invert list-disc pl-5 h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/30 scrollbar-thumb-rounded-full">
+            <ul className="flex flex-col gap-2 p-2 prose prose-sm dark:prose-invert list-disc pl-5 h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/30 scrollbar-thumb-rounded-full">
               {threads?.map((thread) => (
                 <li
                   key={thread.id}
-                  onClick={() => {
-                    if (id === thread.id) {
-                      return;
-                    }
-                    navigate(`/chat/${thread.id}`);
-                    onClose();
-                  }}
                   className={cn(
-                    "cursor-pointer hover:text-foreground transition-colors",
-                    id === thread.id && "bg-secondary rounded"
+                    "flex items-center justify-between cursor-pointer hover:text-foreground transition-colors pr-2",
+                    id === thread.id && "bg-secondary "
                   )}
                 >
-                  {thread.title.slice(0, 30)}..
+                  <span
+                    onClick={() => {
+                      if (id === thread.id) {
+                        return;
+                      }
+                      navigate(`/chat/${thread.id}`);
+                      onClose();
+                    }}
+                    className="flex-1"
+                  >
+                    {thread.title.slice(0, 30)}..
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-muted"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Ellipsis className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShareThread(thread.id);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {sharedThreadId === thread.id ? (
+                          <>
+                            <Share2 className="h-4 w-4 mr-2 text-green-600" />
+                            Link Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share Chat
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteThread(thread.id);
+                        }}
+                        variant="destructive"
+                        className="cursor-pointer"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Chat
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </li>
               ))}
             </ul>

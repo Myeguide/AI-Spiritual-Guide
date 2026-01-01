@@ -17,12 +17,11 @@ export const planExtras = [
   {
     planType: PlanType.MONTHLY,
     icon: "zap",
-    badge: "Best Value",
   },
   {
     planType: PlanType.ANNUALLY,
     icon: "crown",
-    badge: "Most Popular",
+    badge: "Best Value",
   },
   {
     planType: PlanType.FREE,
