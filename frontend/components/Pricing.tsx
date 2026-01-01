@@ -298,15 +298,14 @@ export default function PricingPage() {
             Flexible pricing plans for every need
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-            Find the perfect plan—whether you're starting out or scaling up with
-            advanced tools and premium support.
+            International Cards may incur currency conversion charges by your bank
           </p>
         </div>
 
         {plansLoading ? (
           <ShimmerPricingScreen />
         ) : (
-          <div className="grid gap-6 mx-auto md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 max-w-4xl mx-auto md:grid-cols-2 lg:grid-cols-2">
             {plans?.map((plan) => (
               <PricingCard
                 key={plan.type}

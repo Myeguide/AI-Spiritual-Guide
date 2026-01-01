@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, useState } from "react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { Check, Copy, RefreshCcw, SquarePen } from "lucide-react";
+import { Check, Copy, RefreshCcw, Share2, SquarePen } from "lucide-react";
 import { UIMessage } from "ai";
 import { UseChatHelpers } from "@ai-sdk/react";
 import { deleteTrailingMessages } from "@/frontend/dexie/queries";
@@ -28,6 +28,7 @@ export default function MessageControls({
   stop,
 }: MessageControlsProps) {
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
 
   const handleCopy = () => {
@@ -35,6 +36,15 @@ export default function MessageControls({
     setCopied(true);
     setTimeout(() => {
       setCopied(false);
+    }, 2000);
+  };
+
+  const handleShare = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl);
+    setShared(true);
+    setTimeout(() => {
+      setShared(false);
     }, 2000);
   };
 
@@ -85,14 +95,18 @@ export default function MessageControls({
   return (
     <div
       className={cn(
-        "opacity-0 group-hover:opacity-100 transition-opacity duration-100 flex gap-1",
+        "flex gap-1",
         {
-          "absolute mt-5 right-2": message.role === "user",
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-100 absolute mt-5 right-2": message.role === "user",
+          "opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-100": message.role !== "user",
         }
       )}
     >
       <Button variant="ghost" size="icon" onClick={handleCopy}>
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+      </Button>
+      <Button variant="ghost" size="icon" onClick={handleShare}>
+        {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
       </Button>
       {setMode && isAuthenticated && (
         <Button variant="ghost" size="icon" onClick={() => setMode("edit")}>
