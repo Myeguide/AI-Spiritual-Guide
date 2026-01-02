@@ -34,13 +34,56 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
     []
   );
 
-  const handleShareThread = (threadId: string) => {
+  const copyToClipboard = async (text: string) => {
+    // Try modern clipboard API first
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    // Fallback for older browsers/contexts
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textArea);
+  };
+
+  const handleShareThread = async (threadId: string, threadTitle: string) => {
     const shareUrl = `${window.location.origin}/chat/${threadId}`;
-    navigator.clipboard.writeText(shareUrl);
-    setSharedThreadId(threadId);
-    setTimeout(() => {
-      setSharedThreadId(null);
-    }, 2000);
+    
+    // Check if Web Share API is supported
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: threadTitle,
+          text: "Check out this spiritual conversation",
+          url: shareUrl,
+        });
+        setSharedThreadId(threadId);
+        setTimeout(() => setSharedThreadId(null), 2000);
+        return;
+      } catch (error) {
+        // User cancelled or error - only fallback if not user cancellation
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
+        console.error("Share failed:", error);
+      }
+    }
+    
+    // Fallback: copy to clipboard
+    try {
+      await copyToClipboard(shareUrl);
+      setSharedThreadId(threadId);
+      setTimeout(() => setSharedThreadId(null), 2000);
+      alert("Link copied to clipboard!");
+    } catch (error) {
+      console.error("Copy failed:", error);
+      alert(`Share this link: ${shareUrl}`);
+    }
   };
 
   const handleDeleteThread = async (threadId: string) => {
@@ -122,9 +165,9 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShareThread(thread.id);
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          handleShareThread(thread.id, thread.title);
                         }}
                         className="cursor-pointer"
                       >

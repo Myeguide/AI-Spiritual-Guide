@@ -98,7 +98,7 @@ export default function MessageControls({
         "flex gap-1",
         {
           "opacity-0 group-hover:opacity-100 transition-opacity duration-100 absolute mt-5 right-2": message.role === "user",
-          "opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-100": message.role !== "user",
+          "opacity-100 transition-opacity duration-100": message.role !== "user",
         }
       )}
     >
