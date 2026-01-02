@@ -45,8 +45,17 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
   };
 
   const handleDeleteThread = async (threadId: string) => {
-    await deleteThread(threadId);
-    await apiCall(`/api/threads/${threadId}`, "DELETE");
+    try {
+      // Delete from local IndexedDB first
+      await deleteThread(threadId);
+      // Delete from server
+      const response = await apiCall(`/api/threads/${threadId}`, "DELETE");
+      if (!response.success) {
+        console.error("Failed to delete thread from server:", response);
+      }
+    } catch (error) {
+      console.error("Error deleting thread:", error);
+    }
     if (id === threadId) {
       navigate("/chat");
     }

@@ -90,11 +90,20 @@ export default function ChatSidebar() {
                           onClick={async (event) => {
                             event.preventDefault();
                             event.stopPropagation();
-                            await deleteThread(thread.id);
-                            await apiCall(
-                              `/api/threads/${thread.id}`,
-                              "DELETE"
-                            );
+                            try {
+                              // Delete from local IndexedDB first
+                              await deleteThread(thread.id);
+                              // Delete from server
+                              const response = await apiCall(
+                                `/api/threads/${thread.id}`,
+                                "DELETE"
+                              );
+                              if (!response.success) {
+                                console.error("Failed to delete thread from server:", response);
+                              }
+                            } catch (error) {
+                              console.error("Error deleting thread:", error);
+                            }
                             if (id === thread.id) {
                               navigate(`/chat`);
                             }
