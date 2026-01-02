@@ -92,10 +92,12 @@ export default function ChatSidebar() {
                             event.stopPropagation();
                             await deleteThread(thread.id);
                             await apiCall(
-                              `/api/threads?threadId=${id}`,
+                              `/api/threads/${thread.id}`,
                               "DELETE"
                             );
-                            navigate(`/chat`);
+                            if (id === thread.id) {
+                              navigate(`/chat`);
+                            }
                           }}
                         >
                           <X size={16} />
