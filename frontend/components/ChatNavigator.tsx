@@ -12,6 +12,7 @@ import { NavUser } from "./NavUser";
 import { cn } from "@/lib/utils";
 import { useSubscriptionStore } from "@/frontend/stores/SubscriptionStore";
 import { deleteThread } from "../dexie/queries";
+import { apiCall } from "@/utils/api-call";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
 
   const handleDeleteThread = async (threadId: string) => {
     await deleteThread(threadId);
+    await apiCall(`/api/threads/${threadId}`, "DELETE");
     if (id === threadId) {
       navigate("/chat");
     }
