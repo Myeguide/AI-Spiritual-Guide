@@ -1,10 +1,16 @@
-import { memo } from 'react';
-import { useNavigate, useLocation } from 'react-router';
-import { MessageSquare, User, CreditCard, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from './ui/dialog';
-import AuthForm from './AuthForm';
-import { useUserStore } from '../stores/UserStore';
+import { memo } from "react";
+import { useNavigate, useLocation } from "react-router";
+import {
+  MessageSquare,
+  User,
+  CreditCard,
+  X,
+  LayoutDashboard,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./ui/dialog";
+import AuthForm from "./AuthForm";
+import { useUserStore } from "../stores/UserStore";
 
 interface MobileNavigatorProps {
   isVisible: boolean;
@@ -14,12 +20,16 @@ interface MobileNavigatorProps {
 function PureMobileNavigator({ isVisible, onClose }: MobileNavigatorProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useUserStore();
+  const { isAuthenticated, user } = useUserStore();
+  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   const navItems = [
-    { path: '/chat', label: 'Chat', icon: MessageSquare },
-    { path: '/billing', label: 'Pricing', icon: CreditCard },
-    { path: '/account', label: 'Account', icon: User },
+    { path: "/chat", label: "Chat", icon: MessageSquare },
+    { path: "/billing", label: "Pricing", icon: CreditCard },
+    { path: "/account", label: "Account", icon: User },
+    ...(isAdmin
+      ? [{ path: "/dashboard", label: "Dashboard", icon: LayoutDashboard }]
+      : []),
   ];
 
   const handleNavigate = (path: string) => {
@@ -66,15 +76,15 @@ function PureMobileNavigator({ isVisible, onClose }: MobileNavigatorProps) {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                
+
                 return (
                   <button
                     key={item.path}
                     onClick={() => handleNavigate(item.path)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-md text-left transition-colors ${
-                      isActive 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'hover:bg-accent'
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent"
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -90,7 +100,9 @@ function PureMobileNavigator({ isVisible, onClose }: MobileNavigatorProps) {
             {!isAuthenticated() ? (
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">Login</Button>
+                  <Button variant="outline" className="w-full">
+                    Login
+                  </Button>
                 </DialogTrigger>
                 <DialogTitle />
                 <DialogContent className="p-0 max-h-[80vh] overflow-y-auto no-scrollbar">

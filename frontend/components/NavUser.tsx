@@ -25,6 +25,7 @@ import {
   useSidebar,
 } from "@/frontend/components/ui/sidebar";
 import { CircleUserRound } from "lucide-react";
+import { IconLayoutDashboard } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { apiCall } from "@/utils/api-call";
@@ -32,9 +33,10 @@ import { toast } from "sonner";
 
 export function NavUser() {
   const { user } = useUserStore();
-  const { firstName, lastName, phoneNumber } = user || {};
+  const { firstName, lastName, phoneNumber, email } = user || {};
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+  const isAdmin = email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
   // In your logout handler (wherever you have it)
   const handleLogout = async () => {
@@ -111,6 +113,12 @@ export function NavUser() {
                 <IconCreditCard />
                 Billing
               </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <IconLayoutDashboard />
+                  Dashboard
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
