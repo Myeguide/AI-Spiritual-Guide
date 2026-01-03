@@ -54,7 +54,7 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
 
   const handleShareThread = async (threadId: string, threadTitle: string) => {
     const shareUrl = `${window.location.origin}/chat/${threadId}`;
-    
+
     // Check if Web Share API is supported
     if (typeof navigator.share === "function") {
       try {
@@ -74,7 +74,7 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
         console.error("Share failed:", error);
       }
     }
-    
+
     // Fallback: copy to clipboard
     try {
       await copyToClipboard(shareUrl);
@@ -125,6 +125,7 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
             <img
               src="/ET.png"
               alt="logo"
+              loading="lazy"
               className="h-8 w-auto object-contain"
             />
             <Button
