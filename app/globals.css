@@ -179,6 +179,19 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Show scrollbar on larger screens (sm: 640px+) */
+  @media (min-width: 640px) {
+    .sm\:scrollbar-thin::-webkit-scrollbar {
+      display: block;
+      width: 6px;
+    }
+
+    .sm\:scrollbar-thin {
+      -ms-overflow-style: auto;
+      scrollbar-width: thin;
+    }
+  }
 }
 
 .shiki {
