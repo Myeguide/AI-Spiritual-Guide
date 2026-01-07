@@ -117,11 +117,13 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
   })() : null;
 
   return (
-    <div className="relative w-full">
+    <div
+      ref={scrollContainerRef}
+      className="relative w-full h-screen overflow-y-auto no-scrollbar sm:scrollbar-thin sm:scrollbar-thumb-border sm:scrollbar-track-transparent hover:sm:scrollbar-thumb-muted-foreground/40"
+    >
       <ChatSidebarTrigger />
       <main
-        ref={scrollContainerRef}
-        className={`flex flex-col w-full max-w-3xl pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out h-screen overflow-y-auto no-scrollbar`}
+        className="flex flex-col w-full max-w-3xl pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out"
       >
         <Messages
           threadId={threadId}
