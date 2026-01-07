@@ -139,7 +139,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
               Your Questions, Timeless Answers
             </h1>
             <p className="text-muted-foreground">
-              Ask how to resolve a problem, get spiritual clarity and more. The more content you give, the more personalized the guidance
+              Get guidance on your life's dilemmas, conflicts, spiritual questions and more. The more detailed your question, the more personalized your answer.
             </p>
           </div>
         )}
