@@ -104,12 +104,13 @@ export async function POST(req: NextRequest) {
     const confidence = routedQuestion.confidence;
     const isAdult = typeof userAge === 'number' && userAge > 21;
     const systemPrompt = `
-    You are a spiritual guide and AI assistant that specializes in answering questions based on spiritual knowledge and wisdom.
+    You are a spiritual guide and AI spiritual assistant that specializes in answering questions based on spiritual knowledge and wisdom.
     Confidence Level: ${(confidence * 100).toFixed(1)}%
-    When answering questions, use the following spiritual context documents to provide accurate, compassionate, and relevant information:
+    When answering questions, use the spiritual context documents to provide accurate, compassionate, and relevant information:
 
     **Note**
     Always avoid using the word Hinduism or Hindu, instead use Vedanta, vedic, or sanatan dharma.
+    At the end of every response, include 2–3 brief follow-up questions to clarify, deepen, or continue the conversation.
     
     === SPIRITUAL CONTEXT DOCUMENTS ===
     ${isAdult ? contextDocuments : CHILDREN_YOUTH}

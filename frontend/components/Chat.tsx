@@ -124,7 +124,10 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     : null;
 
   return (
-    <div className="relative w-full">
+    <div
+      ref={scrollContainerRef}
+      className="relative w-full h-screen overflow-y-auto no-scrollbar sm:scrollbar-thin sm:scrollbar-thumb-border sm:scrollbar-track-transparent hover:sm:scrollbar-thumb-muted-foreground/40"
+    >
       <ChatSidebarTrigger />
       {/* Fixed header bar for small devices with background */}
       <div className="fixed top-0 right-0 left-0 h-12 bg-background/80 backdrop-blur-md z-20 sm:hidden flex items-center justify-end px-2 gap-1">
@@ -162,8 +165,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
               Your Questions, Timeless Answers
             </h1>
             <p className="text-muted-foreground">
-              Ask how to resolve a problem, get spiritual clarity and more. The
-              more content you give, the more personalized the guidance
+              Get guidance on your life's dilemmas, conflicts, spiritual questions and more. The more detailed your question, the more personalized your answer.
             </p>
           </div>
         )}

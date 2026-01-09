@@ -470,8 +470,7 @@ export default function Footer() {
                       </h3>
                       <ul className="list-disc pl-5 space-y-1">
                         <li>
-                          Subscription plans: ₹650/month or ₹2,999/year or
-                          ₹5,999/year.
+                          Subscription plans: ₹49/onetime or ₹499/month or ₹3,599/year.
                         </li>
                         <li>
                           Pricing is subject to change with notice for future
@@ -566,13 +565,13 @@ export default function Footer() {
           <p className="text-white/80 mb-6">+91 98200 34220</p>
 
           <div className="flex items-center gap-6">
-            <a className="border rounded-full p-3">
+            <a href="https://www.facebook.com/MyEternalGuide/" target="_blank" className="border rounded-full p-3">
               <Facebook className="w-5 h-5 text-white/80 hover:text-white transition" />
             </a>
-            <a className="border rounded-full p-3">
+            <a href="https://www.instagram.com/myeternalguide/" target="_blank" className="border rounded-full p-3">
               <Instagram className="w-5 h-5 text-white/80 hover:text-white transition" />
             </a>
-            <a className="border rounded-full p-3">
+            <a href="https://www.youtube.com/@MyEternalGuide" target="_blank" className="border rounded-full p-3">
               <Youtube className="w-5 h-5 text-white/80 hover:text-white transition" />
             </a>
           </div>
