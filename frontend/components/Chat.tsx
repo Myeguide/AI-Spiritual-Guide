@@ -7,7 +7,7 @@ import { createMessage } from "@/frontend/dexie/queries";
 import ThemeToggler from "./ui/ThemeToggler";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { Button } from "./ui/button";
-import { Menu} from "lucide-react";
+import { Menu } from "lucide-react";
 import { useChatNavigator } from "@/frontend/hooks/useChatNavigator";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { useEffect, useRef } from "react";
@@ -73,7 +73,8 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
   // Auto-scroll to bottom when messages change or when streaming
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
     }
   }, [messages, status]);
 
@@ -83,17 +84,21 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       try {
         const parsed = JSON.parse(error.message);
         // Check if error indicates session expired (401 Unauthorized)
-        if (parsed.error === "Invalid or expired token" || 
-            parsed.error === "Unauthorized - No token provided" ||
-            parsed.error === "Unauthorized - Invalid token") {
+        if (
+          parsed.error === "Invalid or expired token" ||
+          parsed.error === "Unauthorized - No token provided" ||
+          parsed.error === "Unauthorized - Invalid token"
+        ) {
           logout();
           navigate("/chat");
         }
       } catch {
         // Not a JSON error, check for common auth error messages
-        if (error.message.includes("Unauthorized") || 
-            error.message.includes("expired token") ||
-            error.message.includes("Invalid token")) {
+        if (
+          error.message.includes("Unauthorized") ||
+          error.message.includes("expired token") ||
+          error.message.includes("Invalid token")
+        ) {
           logout();
           navigate("/chat");
         }
@@ -101,20 +106,22 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
     }
   }, [error, logout, navigate]);
 
-  const rateLimitError = error ? (() => {
-    try {
-      const parsed = JSON.parse(error.message);
-      return {
-        message: parsed.error || "Error",
-        details: parsed.message || "Something went wrong",
-      };
-    } catch {
-      return {
-        message: "Error",
-        details: error.message,
-      };
-    }
-  })() : null;
+  const rateLimitError = error
+    ? (() => {
+        try {
+          const parsed = JSON.parse(error.message);
+          return {
+            message: parsed.error || "Error",
+            details: parsed.message || "Something went wrong",
+          };
+        } catch {
+          return {
+            message: "Error",
+            details: error.message,
+          };
+        }
+      })()
+    : null;
 
   return (
     <div
@@ -122,8 +129,25 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       className="relative w-full h-screen overflow-y-auto no-scrollbar sm:scrollbar-thin sm:scrollbar-thumb-border sm:scrollbar-track-transparent hover:sm:scrollbar-thumb-muted-foreground/40"
     >
       <ChatSidebarTrigger />
+      {/* Fixed header bar for small devices with background */}
+      <div className="fixed top-0 right-0 left-0 h-12 bg-background/80 backdrop-blur-md z-20 sm:hidden flex items-center justify-end px-2 gap-1">
+        <ThemeToggler className="relative top-auto right-auto" />
+        <Button
+          onClick={handleToggleNavigator}
+          variant="ghost"
+          size="icon"
+          aria-label={
+            isNavigatorVisible
+              ? "Hide message navigator"
+              : "Show message navigator"
+          }
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
       <main
-        className="flex flex-col w-full max-w-3xl pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out"
+        ref={scrollContainerRef}
+        className={`flex flex-col w-full max-w-3xl pt-14 sm:pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out h-screen overflow-y-auto no-scrollbar`}
       >
         <Messages
           threadId={threadId}
@@ -155,20 +179,10 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
           rateLimitError={rateLimitError}
         />
       </main>
-      <ThemeToggler />
-      <Button
-        onClick={handleToggleNavigator}
-        variant="ghost"
-        size="icon"
-        className="fixed right-10 top-1 z-20 sm:hidden"
-        aria-label={
-          isNavigatorVisible
-            ? "Hide message navigator"
-            : "Show message navigator"
-        }
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+      {/* ThemeToggler visible on larger screens */}
+      <div className="hidden sm:block">
+        <ThemeToggler />
+      </div>
 
       <ChatNavigator
         threadId={threadId}
