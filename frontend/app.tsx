@@ -9,11 +9,14 @@ import { syncDataFromServer } from "@/lib/sync-server";
 import { useUserStore } from "./stores/UserStore";
 import UserProfile from "@/frontend/components/Profile";
 import ContactPage from "@/frontend/components/Contact";
+import Dashboard from "@/frontend/components/Dashboard";
+import AdminRoute from "@/frontend/components/AdminRoute";
 import MainLayout from "./MainLayout";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
-  const { user, token, fetchSubscription, verifySession, sessionChecked } = useUserStore();
+  const { user, token, fetchSubscription, verifySession, sessionChecked } =
+    useUserStore();
   const authenticated = !!user && !!token;
 
   // Verify session on app load - check if token is still valid
@@ -51,7 +54,7 @@ export default function App() {
     if (!authenticated) return;
 
     const handleResync = () => setIsSynced(false);
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         handleResync();
@@ -85,11 +88,19 @@ export default function App() {
           <Route path="/billing" element={<PricingPage />} />
           <Route path="/account" element={<UserProfile />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <AdminRoute>
+                <Dashboard />
+              </AdminRoute>
+            }
+          />
         </Route>
 
         {/* Chat layout WITHOUT footer */}
         <Route path="chat" element={<ChatLayout />}>
-          <Route index element={<Home/>} />
+          <Route index element={<Home />} />
           <Route path=":id" element={<Thread />} />
         </Route>
 

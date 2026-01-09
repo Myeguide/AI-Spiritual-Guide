@@ -1,4 +1,4 @@
-import { MSG91_CONFIG, msg91WhatsAppRequest } from '@/lib/msg91';
+import { MSG91_CONFIG, msg91WhatsAppRequest, msg91WhatsAppSendMessage } from '@/lib/msg91';
 import { prisma } from '@/lib/prisma';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText } from 'ai';
@@ -40,7 +40,7 @@ export class WhatsAppService {
                     template: {
                         name: MSG91_CONFIG.whatsappTemplateName,
                         language: {
-                            code: 'en_US',
+                            code: 'en',
                             policy: 'deterministic',
                         },
                         namespace: "d43a42eb_491d_4cfb_b23d_21b106bd380c",
@@ -75,6 +75,7 @@ export class WhatsAppService {
 
     /**
      * Send reply message to user (within 24hr window)
+     * Uses MSG91 query parameter format as per their docs
      */
     static async sendReplyMessage(
         phoneNumber: string,
@@ -85,16 +86,11 @@ export class WhatsAppService {
                 ? phoneNumber.slice(1)
                 : phoneNumber;
 
-            await msg91WhatsAppRequest('/whatsapp-outbound-message/bulk/', {
-                integrated_number: MSG91_CONFIG.whatsappNumber,
-                content_type: 'text',
-                payload: {
-                    to: formattedNumber,
-                    type: 'text',
-                    text: {
-                        body: message,
-                    },
-                },
+            // MSG91 WhatsApp API - uses query parameters
+            await msg91WhatsAppSendMessage({
+                recipientNumber: formattedNumber,
+                contentType: 'text',
+                text: message,
             });
 
         } catch (error: any) {
@@ -137,7 +133,7 @@ export class WhatsAppService {
         const activeSubscription = user.Subscription[0];
 
         if (!activeSubscription || activeSubscription.planType === 'free') {
-            return "WhatsApp chat is available only for paid plan subscribers. Please upgrade your plan in the app.";
+            return "WhatsApp chat is available only for paid plan subscribers. Please upgrade your plan to access answers via WhatsApp.";
         }
 
         // Check subscription validity
@@ -194,7 +190,6 @@ export class WhatsAppService {
                 model: openai('gpt-4o'),
                 messages: [{ role: 'user', content: userMessage }],
                 system: systemPrompt,
-                maxTokens: 500, // Keep responses shorter for WhatsApp
             });
 
             // Update memory
