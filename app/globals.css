@@ -182,14 +182,24 @@
 
   /* Show scrollbar on larger screens (sm: 640px+) */
   @media (min-width: 640px) {
+    .sm\:scrollbar::-webkit-scrollbar,
     .sm\:scrollbar-thin::-webkit-scrollbar {
       display: block;
-      width: 6px;
+      width: 8px;
     }
 
+    .sm\:scrollbar,
     .sm\:scrollbar-thin {
       -ms-overflow-style: auto;
-      scrollbar-width: thin;
+      scrollbar-width: auto;
+    }
+
+    .sm\:scrollbar::-webkit-scrollbar-thumb {
+      border-radius: 4px;
+    }
+
+    .sm\:scrollbar::-webkit-scrollbar-track {
+      border-radius: 4px;
     }
   }
 }
