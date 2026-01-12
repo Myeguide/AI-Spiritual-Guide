@@ -136,6 +136,7 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
           onClick={handleToggleNavigator}
           variant="ghost"
           size="icon"
+          title="Message Navigator"
           aria-label={
             isNavigatorVisible
               ? "Hide message navigator"

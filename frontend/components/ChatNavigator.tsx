@@ -136,7 +136,8 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 bg-[#B500FF] text-white rounded"
-              aria-label="Close navigator"
+              title="New Chat"
+              aria-label="New Chat"
             >
               <MessageCirclePlus className="h-4 w-4" />
             </Button>
@@ -171,6 +172,7 @@ function PureChatNavigator({ isVisible, onClose }: MessageNavigatorProps) {
                         size="icon"
                         className="h-6 w-6 hover:bg-muted"
                         onClick={(e) => e.stopPropagation()}
+                        title="Options"
                       >
                         <Ellipsis className="h-4 w-4" />
                       </Button>

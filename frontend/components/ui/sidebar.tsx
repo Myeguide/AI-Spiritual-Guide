@@ -269,6 +269,7 @@ function SidebarTrigger({
         onClick?.(event);
         toggleSidebar();
       }}
+      title="Toggle Sidebar"
       {...props}
     >
       <PanelLeftIcon className="size-4" />
