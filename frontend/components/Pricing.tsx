@@ -20,7 +20,7 @@ import {
 import { Button } from "@/frontend/components/ui/button";
 import { Checkbox } from "@/frontend/components/ui/checkbox";
 import { Label } from "@/frontend/components/ui/label";
-import { CreditCard, Loader2 } from "lucide-react";
+import { CreditCard, Gift, Loader2 } from "lucide-react";
 import MobileNavTrigger from "./MobileNavTrigger";
 import MobileNavigator from "./MobileNavigator";
 
@@ -317,6 +317,60 @@ export default function PricingPage() {
             ))}
           </div>
         )}
+
+        {/* Gift Cards Section */}
+        <div className="mt-20 mb-10">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              True gifts don't fade — they transform lives
+            </h2>
+            <p className="text-foreground max-w-3xl mx-auto">
+              Gift clarity, strength and purpose to the ones you love most. Your purchase goes a long way in spreading Vedic wisdom. We deeply appreciate your support.
+            </p>
+          </div>
+
+          <div className="grid gap-6 max-w-4xl mx-auto md:grid-cols-2">
+            {/* 3 Months Gift Card */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E879F9] to-[#F0ABFC] p-8 shadow-lg">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#D946EF]/30 rounded-full blur-3xl" />
+              <div className="relative">
+                <Gift className="w-16 h-16 text-[#86198F] mb-4" strokeWidth={1.5} />
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2">3 Months</h3>
+                <p className="text-4xl font-bold text-[#1a1a1a] mb-4">₹999</p>
+                <p className="text-[#1a1a1a]/80 mb-6">
+                  Gift a starter subscription to the ones you love to help them find clarity.
+                </p>
+                <Button
+                  variant="outline"
+                  className="bg-white hover:bg-white/90 text-[#B500FF] border-0 font-semibold px-8"
+                  onClick={() => toast.info("Gift card feature coming soon!")}
+                >
+                  Buy Gift
+                </Button>
+              </div>
+            </div>
+
+            {/* 1 Year Gift Card */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E879F9] to-[#F0ABFC] p-8 shadow-lg">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#D946EF]/30 rounded-full blur-3xl" />
+              <div className="relative">
+                <Gift className="w-16 h-16 text-[#86198F] mb-4" strokeWidth={1.5} />
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2">1 Year</h3>
+                <p className="text-4xl font-bold text-[#1a1a1a] mb-4">₹3,599</p>
+                <p className="text-[#1a1a1a]/80 mb-6">
+                  For the ones who matter most, gift guidance that never fades.
+                </p>
+                <Button
+                  variant="outline"
+                  className="bg-white hover:bg-white/90 text-[#B500FF] border-0 font-semibold px-8"
+                  onClick={() => toast.info("Gift card feature coming soon!")}
+                >
+                  Buy Gift
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Payment Method Selection Dialog */}

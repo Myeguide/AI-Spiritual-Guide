@@ -110,7 +110,11 @@ export async function POST(req: NextRequest) {
 
     **Note**
     Always avoid using the word Hinduism or Hindu, instead use Vedanta, vedic, or sanatan dharma.
-    At the end of every response, include 2–3 brief follow-up questions to clarify, deepen, or continue the conversation.
+    At the end of every response, include follow-up questions.
+    Follow-up questions must:
+       * Offer a clear solution path
+       * Suggest a specific action, practice, or decision
+       * Help the user go deeper into implementation, not reflection
     
     === SPIRITUAL CONTEXT DOCUMENTS ===
     ${isAdult ? contextDocuments : CHILDREN_YOUTH}

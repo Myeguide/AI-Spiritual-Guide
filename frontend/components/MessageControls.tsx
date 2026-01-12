@@ -102,19 +102,19 @@ export default function MessageControls({
         }
       )}
     >
-      <Button variant="ghost" size="icon" onClick={handleCopy}>
+      <Button variant="ghost" size="icon" onClick={handleCopy} title={copied ? "Copied!" : "Copy"}>
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
       </Button>
-      <Button variant="ghost" size="icon" onClick={handleShare}>
+      <Button variant="ghost" size="icon" onClick={handleShare} title={shared ? "Link copied!" : "Share"}>
         {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
       </Button>
       {setMode && isAuthenticated && (
-        <Button variant="ghost" size="icon" onClick={() => setMode("edit")}>
+        <Button variant="ghost" size="icon" onClick={() => setMode("edit")} title="Edit">
           <SquarePen className="w-4 h-4" />
         </Button>
       )}
       {isAuthenticated && (
-        <Button variant="ghost" size="icon" onClick={handleRegenerate}>
+        <Button variant="ghost" size="icon" onClick={handleRegenerate} title="Regenerate">
           <RefreshCcw className="w-4 h-4" />
         </Button>
       )}

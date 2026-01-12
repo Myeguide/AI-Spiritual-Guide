@@ -276,6 +276,7 @@ function PureStopButton({ stop }: StopButtonProps) {
       variant="outline"
       size="icon"
       onClick={stop}
+      title="Stop generating"
       aria-label="Stop generating response"
       className="bg-[#B500FF]!"
     >
@@ -293,6 +294,7 @@ const PureSendButton = ({ onSubmit, disabled, isLoading }: SendButtonProps) => {
       variant="default"
       size="icon"
       disabled={disabled}
+      title="Send message"
       aria-label="Send message"
       className="bg-[#B500FF] text-white disabled:opacity-50 disabled:cursor-not-allowed"
     >
