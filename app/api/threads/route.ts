@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AuthMiddleware } from "@/app/middleware/middleware";
+import { verifyToken } from "@/lib/generate-token";
+
+function getIdentity(req: NextRequest): { userId: string | null; anonId: string | null } {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const anonId = !userId ? (req.headers.get("x-anonymous-id")?.trim() || null) : null;
+    return { userId, anonId };
+}
 
 /**
  * POST /api/threads
@@ -8,18 +17,16 @@ import { AuthMiddleware } from "@/app/middleware/middleware";
  */
 export async function POST(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         const { threadId } = await req.json();
         const thread = await prisma.thread.create({
             data: {
                 id: threadId,
-                userId,
+                ...(userId ? { userId } : { anonId }),
                 title: "",
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -46,12 +53,10 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         // Optimized query with pagination and selective fields
         const { searchParams } = new URL(req.url);
@@ -62,7 +67,7 @@ export async function GET(req: NextRequest) {
         const [threads, totalCount] = await Promise.all([
             prisma.thread.findMany({
                 where: {
-                    userId,
+                    ...(userId ? { userId } : { anonId, userId: null }),
                 },
                 select: {
                     id: true,
@@ -85,7 +90,7 @@ export async function GET(req: NextRequest) {
             // Get total count for pagination
             prisma.thread.count({
                 where: {
-                    userId,
+                    ...(userId ? { userId } : { anonId, userId: null }),
                 },
             }),
         ]);
@@ -115,12 +120,10 @@ export async function GET(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         const { searchParams } = new URL(req.url);
         const threadId = searchParams.get("threadId");
@@ -135,7 +138,7 @@ export async function DELETE(req: NextRequest) {
         // Verify thread belongs to user before deleting
         const thread = await prisma.thread.findUnique({
             where: { id: threadId },
-            select: { userId: true },
+            select: { userId: true, anonId: true },
         });
 
         if (!thread) {
@@ -145,7 +148,8 @@ export async function DELETE(req: NextRequest) {
             );
         }
 
-        if (thread.userId !== userId) {
+        const allowed = userId ? thread.userId === userId : (thread.userId === null && thread.anonId === anonId);
+        if (!allowed) {
             return NextResponse.json(
                 { success: false, error: "Forbidden" },
                 { status: 403 }
@@ -177,12 +181,10 @@ export async function DELETE(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         const { threadId, title } = await req.json();
 
@@ -197,7 +199,7 @@ export async function PATCH(req: NextRequest) {
         const thread = await prisma.thread.updateMany({
             where: {
                 id: threadId,
-                userId,
+                ...(userId ? { userId } : { anonId, userId: null }),
             },
             data: {
                 title,

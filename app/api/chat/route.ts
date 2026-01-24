@@ -1,6 +1,8 @@
-import { AuthMiddleware } from '@/app/middleware/middleware';
 import { classifyQuestion } from '@/lib/classification/question-classify';
 import { verifyToken } from '@/lib/generate-token';
+import {
+  AnonymousUsageService
+} from "@/lib/services/anonymous-usage.service";
 import { SubscriptionService } from '@/lib/services/subscription.service';
 import { UserService } from '@/lib/services/user.service';
 import { getMemorySummary, updateMemory } from '@/lib/user-memory';
@@ -11,16 +13,112 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const MODEL_NAME = 'gpt-4o';
 
+function getAnonIdentifier(req: NextRequest): string {
+  const headerId = req.headers.get("x-anonymous-id")?.trim();
+  if (headerId) return headerId;
+
+  const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = forwardedFor || req.headers.get("x-real-ip")?.trim() || "unknown-ip";
+  const ua = req.headers.get("user-agent")?.slice(0, 120) || "unknown-ua";
+  return `ip:${ip}|ua:${ua}`;
+}
+
 export async function POST(req: NextRequest) {
 
   try {
     const { messages } = await req.json();
-    const auth = AuthMiddleware(req);
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const userAge = verified?.age;
 
-    if ("error" in auth) {
-      return NextResponse.json(auth, { status: auth.status });
+    // Guest flow: allow chatting without login up to ANON_FREE_QUESTION_LIMIT questions
+    if (!userId) {
+      const identifier = getAnonIdentifier(req);
+      const anonStatus = await AnonymousUsageService.getStatus(
+        identifier,
+        Number(process.env.ANON_FREE_QUESTION_LIMIT)
+      );
+
+      if (!anonStatus.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Guest limit reached",
+            message:
+              "You've reached the free limit of 10 questions. Please login or register to continue.",
+            data: {
+              requiresAuth: true,
+              ...anonStatus,
+            },
+          },
+          { status: 403 }
+        );
+      }
+
+      const openai = createOpenAI({
+        apiKey: process.env.OPENAI_API_KEY!,
+        compatibility: "strict",
+      });
+
+      const routedQuestion = await classifyQuestion(
+        messages[messages.length - 1].content
+      );
+      const contextDocuments = routedQuestion.templateContent;
+      const confidence = routedQuestion.confidence;
+      const isAdult = true;
+      const systemPrompt = `
+    You are a spiritual guide and AI spiritual assistant that specializes in answering questions based on spiritual knowledge and wisdom.
+    Confidence Level: ${(confidence * 100).toFixed(1)}%
+    When answering questions, use the spiritual context documents to provide accurate, compassionate, and relevant information:
+
+    **Note**
+    Always avoid using the word Hinduism or Hindu, instead use Vedanta, vedic, or sanatan dharma.
+    At the end of every response, include follow-up questions.
+    Follow-up questions must:
+       * Offer a clear solution path
+       * Suggest a specific action, practice, or decision
+       * Help the user go deeper into implementation, not reflection
+    
+    === SPIRITUAL CONTEXT DOCUMENTS ===
+    ${isAdult ? contextDocuments : CHILDREN_YOUTH}
+    
+    User Context:
+    No previous information about this guest user.
+  `;
+
+      let requestCounted = false;
+
+      const result = streamText({
+        model: openai(MODEL_NAME),
+        messages,
+        onFinish: async () => {
+          try {
+            if (!requestCounted) {
+              await AnonymousUsageService.increment(identifier);
+              requestCounted = true;
+            }
+          } catch (error) {
+            console.error("Failed to increment guest usage:", error);
+          }
+        },
+        onError: async (error) => {
+          console.error("Streaming error:", error);
+          requestCounted = false;
+        },
+        system: systemPrompt,
+        experimental_transform: [smoothStream({ chunking: "word" })],
+        abortSignal: req.signal,
+      });
+
+      return result.toDataStreamResponse({
+        sendReasoning: true,
+        getErrorMessage: (error) => {
+          return (error as { message: string }).message;
+        },
+      });
     }
-    const { userId, userAge } = auth;
 
     // Get user with active subscription
     const user = await UserService.getUserById(userId);

@@ -26,10 +26,15 @@ export const usePlans = () => {
                 const response = await apiCall("/api/subscription-tier", "GET");
 
                 if (!response.success) {
-                    throw new Error(`Failed to fetch plans: ${response.statusText}`);
+                    throw new Error(
+                      `Failed to fetch plans: ${response.error || response.message || "Unknown error"}`
+                    );
                 }
 
-                const plansWithExtras = response.data.map(
+                const plansWithExtras = response.data
+                    // Hide free plan from UI; guests get a separate 10-question trial
+                    .filter((item: any) => item.type !== "free")
+                    .map(
                     (item: any) => ({
                         ...item,
                         ...(planExtras.find((plan) => item.type === plan.planType) || {}),

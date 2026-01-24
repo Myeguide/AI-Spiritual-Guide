@@ -35,7 +35,7 @@ export default function App() {
 
   useEffect(() => {
     const initializeSync = async () => {
-      if (!authenticated || isSynced) return;
+      if (isSynced) return;
 
       try {
         await syncDataFromServer();

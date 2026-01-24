@@ -2,6 +2,40 @@ import { prisma } from '@/lib/prisma';
 import { PlanType } from '@/types/payment';
 
 export class UserService {
+    static async createUser(data: {
+        phoneNumber: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        age?: number;
+        password: string;
+        dob: Date;
+    }) {
+        const newUser = await prisma.user.create({
+            data: {
+                phoneNumber: data.phoneNumber,
+                firstName: data.firstName,
+                lastName: data.lastName,
+                email: data.email,
+                age: data.age ?? null,
+                password: data.password,
+                dob: data.dob,
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phoneNumber: true,
+                email: true,
+                age: true,
+                password: true,
+                dob: true,
+            },
+        });
+
+        return newUser;
+    }
+
     static async createUserWithFreeSubscription(data: {
         phoneNumber: string;
         firstName: string;

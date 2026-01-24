@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { createMessageSummary, updateThread } from '@/frontend/dexie/queries';
 import { useUserStore } from '../stores/UserStore';
 import { apiCall } from '@/utils/api-call';
+import { getOrCreateAnonymousId } from '@/frontend/utils/anonymous';
 
 interface MessageSummaryPayload {
   title: string;
@@ -17,7 +18,9 @@ export const useMessageSummary = () => {
   const { complete, isLoading } = useCompletion({
     api: '/api/completion',
     ...{
-      headers: { Authorization: `Bearer ${userConfig}` },
+      headers: userConfig
+        ? { Authorization: `Bearer ${userConfig}` }
+        : { "X-Anonymous-Id": getOrCreateAnonymousId() },
     },
     onResponse: async (response) => {
       try {

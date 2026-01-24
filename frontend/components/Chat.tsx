@@ -13,6 +13,7 @@ import { useUserStore } from "@/frontend/stores/UserStore";
 import { useEffect, useRef } from "react";
 import { apiCall } from "@/utils/api-call";
 import { useNavigate } from "react-router";
+import { getOrCreateAnonymousId } from "@/frontend/utils/anonymous";
 
 interface ChatProps {
   threadId: string;
@@ -21,6 +22,7 @@ interface ChatProps {
 
 export default function Chat({ threadId, initialMessages }: ChatProps) {
   const userConfig = useUserStore((state) => state.token);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated());
   const logout = useUserStore((state) => state.logout);
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,8 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       }
     },
     headers: {
-      Authorization: `Bearer ${userConfig}`,
+      ...(userConfig ? { Authorization: `Bearer ${userConfig}` } : {}),
+      ...(!userConfig ? { "X-Anonymous-Id": getOrCreateAnonymousId() } : {}),
     },
   });
 

@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AuthMiddleware } from "@/app/middleware/middleware";
+import { verifyToken } from "@/lib/generate-token";
+
+function getIdentity(req: NextRequest): { userId: string | null; anonId: string | null } {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const anonId = !userId ? (req.headers.get("x-anonymous-id")?.trim() || null) : null;
+    return { userId, anonId };
+}
 
 export async function PUT(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         // Await params before accessing id
         const { id } = await context.params;
         const { title } = await req.json();
 
         const thread = await prisma.thread.update({
-            where: { id, userId },
+            where: { id },
             data: { title, updatedAt: new Date() },
         });
 
@@ -38,18 +45,31 @@ export async function DELETE(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         // Await params before accessing id
         const { id } = await context.params;
 
+        // Verify ownership
+        const thread = await prisma.thread.findUnique({
+            where: { id },
+            select: { userId: true, anonId: true },
+        });
+
+        if (!thread) {
+            return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+        }
+
+        const allowed = userId ? thread.userId === userId : (thread.userId === null && thread.anonId === anonId);
+        if (!allowed) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
         await prisma.thread.delete({
-            where: { id, userId },
+            where: { id },
         });
 
         return NextResponse.json({ success: true });

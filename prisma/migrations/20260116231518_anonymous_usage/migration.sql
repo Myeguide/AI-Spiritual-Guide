@@ -36,6 +36,7 @@ CREATE TABLE "users" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "active_subscription_id" TEXT,
     "requests_used_lifetime" INTEGER NOT NULL DEFAULT 0,
+    "whatsapp_enabled" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -69,6 +70,8 @@ CREATE TABLE "subscriptions" (
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'PENDING',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "reminder_sent_at" TIMESTAMP(3),
+    "expired_email_sent" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
@@ -156,6 +159,46 @@ CREATE TABLE "Message" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "whatsapp_messages" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "phone_number" TEXT NOT NULL,
+    "direction" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "msg91_id" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'sent',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "whatsapp_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "anonymous_usage" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "questions_used" INTEGER NOT NULL DEFAULT 0,
+    "last_used_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "anonymous_usage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "email_logs" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'sent',
+    "metadata" JSONB,
+    "sent_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "email_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -251,32 +294,23 @@ CREATE INDEX "Message_userId_idx" ON "Message"("userId");
 -- CreateIndex
 CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
--- AddForeignKey
-ALTER TABLE "OtpCode" ADD CONSTRAINT "OtpCode_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "whatsapp_messages_user_id_idx" ON "whatsapp_messages"("user_id");
 
--- AddForeignKey
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "whatsapp_messages_phone_number_idx" ON "whatsapp_messages"("phone_number");
 
--- AddForeignKey
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_tier_id_fkey" FOREIGN KEY ("tier_id") REFERENCES "subscription_tiers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "anonymous_usage_identifier_key" ON "anonymous_usage"("identifier");
 
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "subscriptions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "anonymous_usage_identifier_idx" ON "anonymous_usage"("identifier");
 
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "email_logs_user_id_idx" ON "email_logs"("user_id");
 
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_payment_method_id_fkey" FOREIGN KEY ("payment_method_id") REFERENCES "payment_methods"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "email_logs_type_idx" ON "email_logs"("type");
 
--- AddForeignKey
-ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_methods_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UserMemory" ADD CONSTRAINT "UserMemory_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Thread" ADD CONSTRAINT "Thread_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "Thread"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "email_logs_sent_at_idx" ON "email_logs"("sent_at");

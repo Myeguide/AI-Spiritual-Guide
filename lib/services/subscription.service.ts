@@ -203,6 +203,8 @@ export class SubscriptionService {
                 where: {
                     userId: userId,
                     status: SubscriptionStatus.ACTIVE,
+                    // Registered users must be on a paid plan (guest gets the free 10-question trial)
+                    planType: { not: "free" },
                 },
                 include: {
                     tier: true

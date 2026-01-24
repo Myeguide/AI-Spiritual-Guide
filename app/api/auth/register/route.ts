@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         const age = calculateAge(dob);
 
         try {
-            user = await UserService.createUserWithFreeSubscription({
+            user = await UserService.createUser({
                 phoneNumber,
                 firstName,
                 lastName,

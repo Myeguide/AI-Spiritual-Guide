@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AuthMiddleware } from "@/app/middleware/middleware";
+import { verifyToken } from "@/lib/generate-token";
+
+function getIdentity(req: NextRequest): { userId: string | null; anonId: string | null } {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const anonId = !userId ? (req.headers.get("x-anonymous-id")?.trim() || null) : null;
+    return { userId, anonId };
+}
 
 export async function DELETE(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
         const { threadId, createdAt, gte = true } = await req.json();
 
         // Validate required fields
-        if (!threadId || !userId || !createdAt) {
+        if (!threadId || !createdAt) {
             return NextResponse.json(
                 { error: "Missing required fields: threadId, userId, or createdAt" },
                 { status: 400 }
@@ -24,7 +31,7 @@ export async function DELETE(req: NextRequest) {
         const thread = await prisma.thread.findFirst({
             where: {
                 id: threadId,
-                userId: userId,
+                ...(userId ? { userId } : { anonId, userId: null }),
             },
         });
 
@@ -40,7 +47,7 @@ export async function DELETE(req: NextRequest) {
         // Build the where clause based on gte parameter
         const whereClause = {
             threadId,
-            userId,
+            ...(userId ? { userId } : { anonId }),
             createdAt: gte ? { gte: targetDate } : { gt: targetDate },
         };
 

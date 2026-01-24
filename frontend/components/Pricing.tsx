@@ -122,12 +122,6 @@ export default function PricingPage() {
   };
 
   const handleSubscribe = async (planType: string) => {
-    // Free plan - just redirect to chat
-    if (planType === PlanType.FREE) {
-      navigate("/chat");
-      return;
-    }
-
     // Check if Razorpay is loaded
     if (!razorpayLoaded) {
       toast.error("Payment gateway is loading. Please try again in a moment.");
@@ -306,7 +300,7 @@ export default function PricingPage() {
           <ShimmerPricingScreen />
         ) : (
           <div className="grid gap-6 max-w-4xl mx-auto md:grid-cols-2 lg:grid-cols-2">
-            {plans?.map((plan) => (
+            {plans?.filter((p) => p.type !== PlanType.FREE).map((plan) => (
               <PricingCard
                 key={plan.type}
                 plan={plan}

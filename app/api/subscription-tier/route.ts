@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const tiers = await prisma.subscriptionTier.findMany();
+        const tiers = await prisma.subscriptionTier.findMany({
+            where: { type: { not: "free" } },
+        });
 
-        // Sort tiers in the desired order: free, onetime, monthly, yearly
-        const sortOrder = ['free', 'one-time', 'premium-monthly', 'premium-yearly'];
+        // Sort tiers in the desired order: onetime, monthly, yearly
+        const sortOrder = ['one-time', 'premium-monthly', 'premium-yearly'];
         const sortedTiers = tiers.sort((a, b) => {
             const indexA = sortOrder.indexOf(a.type);
             const indexB = sortOrder.indexOf(b.type);

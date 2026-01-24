@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { UserService } from "@/lib/services/user.service";
-import { AuthMiddleware } from "@/app/middleware/middleware";
+import { verifyToken } from "@/lib/generate-token";
+
+function getIdentity(req: NextRequest): { userId: string | null; anonId: string | null } {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const anonId = !userId ? (req.headers.get("x-anonymous-id")?.trim() || null) : null;
+    return { userId, anonId };
+}
 
 /*
  * POST /api/messages
@@ -9,20 +17,9 @@ import { AuthMiddleware } from "@/app/middleware/middleware";
 */
 export async function POST(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
-        }
-        const { userId } = auth;
-
-        // Get user with active subscription
-        const user = await UserService.getUserById(userId);
-        if (!user) {
-            return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
-            );
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const { threadId, message } = await req.json();
@@ -37,7 +34,7 @@ export async function POST(req: NextRequest) {
         // Verify user owns this thread (security check)
         const thread = await prisma.thread.findUnique({
             where: { id: threadId },
-            select: { userId: true },
+            select: { userId: true, anonId: true },
         });
 
         if (!thread) {
@@ -47,7 +44,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        if (thread.userId !== userId) {
+        const allowed = userId ? thread.userId === userId : (thread.userId === null && thread.anonId === anonId);
+        if (!allowed) {
             return NextResponse.json(
                 { success: false, error: "Access denied" },
                 { status: 403 }
@@ -72,7 +70,7 @@ export async function POST(req: NextRequest) {
             data: {
                 id: message.id,
                 threadId,
-                userId,
+                ...(userId ? { userId } : { anonId }),
                 content: message.content,
                 parts: message.parts,
                 role: message.role,
@@ -84,7 +82,6 @@ export async function POST(req: NextRequest) {
         await prisma.thread.update({
             where: {
                 id: threadId,
-                userId
             },
             data: {
                 lastMessageAt: message.createdAt || new Date()
@@ -142,20 +139,9 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
-        }
-        const { userId } = auth;
-
-        // Get user with active subscription
-        const user = await UserService.getUserById(userId);
-        if (!user) {
-            return NextResponse.json(
-                { error: 'User not found' },
-                { status: 404 }
-            );
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const { searchParams } = new URL(req.url);
@@ -170,7 +156,7 @@ export async function GET(req: NextRequest) {
         // Verify user owns this thread
         const thread = await prisma.thread.findUnique({
             where: { id: threadId },
-            select: { userId: true },
+            select: { userId: true, anonId: true },
         });
 
         if (!thread) {
@@ -180,7 +166,8 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        if (thread.userId !== userId) {
+        const allowed = userId ? thread.userId === userId : (thread.userId === null && thread.anonId === anonId);
+        if (!allowed) {
             return NextResponse.json(
                 { success: false, error: "Access denied" },
                 { status: 403 }
@@ -190,7 +177,7 @@ export async function GET(req: NextRequest) {
         const messages = await prisma.message.findMany({
             where: {
                 threadId,
-                userId
+                ...(userId ? { userId } : { anonId }),
             },
             select: {
                 id: true,
