@@ -1,20 +1,27 @@
 // app/api/messages/bulk/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { AuthMiddleware } from "@/app/middleware/middleware";
+import { verifyToken } from "@/lib/generate-token";
+
+function getIdentity(req: NextRequest): { userId: string | null; anonId: string | null } {
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    const verified = token ? verifyToken(token) : null;
+    const userId = verified?.userId || null;
+    const anonId = !userId ? (req.headers.get("x-anonymous-id")?.trim() || null) : null;
+    return { userId, anonId };
+}
 
 export async function GET(req: NextRequest) {
     try {
-        const auth = AuthMiddleware(req);
-
-        if ("error" in auth) {
-            return NextResponse.json(auth, { status: auth.status });
+        const { userId, anonId } = getIdentity(req);
+        if (!userId && !anonId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const { userId } = auth;
 
         // Get all threads for this user
         const threads = await prisma.thread.findMany({
-            where: { userId },
+            where: userId ? { userId } : { anonId, userId: null },
             select: { id: true },
         });
 

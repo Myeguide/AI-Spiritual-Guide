@@ -1,5 +1,5 @@
 import { ArrowUpIcon } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Textarea } from "@/frontend/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Button } from "@/frontend/components/ui/button";
@@ -17,6 +17,7 @@ import { useMessageSummary } from "@/frontend/hooks/useMessageSummary";
 import { useUserStore } from "@/frontend/stores/UserStore";
 import { TokenLimitExceeded } from "./RateWarning";
 import { apiCall } from "@/utils/api-call";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 
 interface ChatInputProps {
   threadId: string;
@@ -59,8 +60,12 @@ function PureChatInput({
   rateLimitError,
 }: ChatInputProps) {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated());
-  const { subscription, subscriptionLoading, subscriptionFetched } = useUserStore();
+  const { subscription, subscriptionLoading, subscriptionFetched } =
+    useUserStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
+  const [guestLimit, setGuestLimit] = useState<number | null>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<{
     message: string;
     details: string;
@@ -71,16 +76,49 @@ function PureChatInput({
   });
   const navigate = useNavigate();
   const { id } = useParams();
-  const isDisabled = useMemo(
-    () =>
+  const isGuestBlocked =
+    !isAuthenticated && guestRemaining !== null && guestRemaining <= 0;
+  const isDisabled = useMemo(() => {
+    if (isGuestBlocked) return true;
+    return (
       !input.trim() ||
       status === "streaming" ||
       status === "submitted" ||
-      isSubmitting,
-    [input, status, isSubmitting]
-  );
+      isSubmitting
+    );
+  }, [input, status, isSubmitting, isGuestBlocked]);
 
   const { complete } = useMessageSummary();
+
+  // Fetch guest usage (no-login free quota)
+  useEffect(() => {
+    const fetchGuestUsage = async () => {
+      if (isAuthenticated) return;
+      try {
+        const res = await apiCall("/api/anonymous/usage", "GET");
+        if (res?.success && res?.data) {
+          setGuestRemaining(res.data.remaining);
+          setGuestLimit(res.data.limit);
+        }
+      } catch (e) {
+        console.error("Failed to fetch guest usage:", e);
+      }
+    };
+
+    fetchGuestUsage();
+    // refresh after completion
+    if (status === "ready") {
+      fetchGuestUsage();
+    }
+  }, [isAuthenticated, status]);
+
+  // Close the auth dialog after successful login/register
+  useEffect(() => {
+    if (isAuthenticated && showAuthDialog) {
+      setShowAuthDialog(false);
+    }
+  }, [isAuthenticated, showAuthDialog]);
+
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
     if (!currentInput.trim()) {
@@ -93,8 +131,25 @@ function PureChatInput({
       return; // Don't proceed with submission
     }
 
-    // Check subscription
-    if (!subscription.hasActiveSubscription) {
+    // Guest gating: allow up to 10 questions, then force login/register
+    if (!isAuthenticated) {
+      try {
+        const res = await apiCall("/api/anonymous/usage", "GET");
+        if (res?.success && res?.data) {
+          setGuestRemaining(res.data.remaining);
+          setGuestLimit(res.data.limit);
+          if (!res.data.allowed) {
+            setShowAuthDialog(true);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check guest usage:", e);
+      }
+    }
+
+    // Authenticated users must have a paid subscription
+    if (isAuthenticated && !subscription.hasActiveSubscription) {
       setSubscriptionError({
         message: "Subscription Required",
         details: "Please subscribe to send messages",
@@ -173,15 +228,8 @@ function PureChatInput({
     isSubmitting,
     rateLimitError,
     subscription.hasActiveSubscription,
+    isAuthenticated,
   ]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="fixed inset-0 z-90 bg-background bg-opacity-90 flex items-center justify-center">
-        <AuthForm />
-      </div>
-    );
-  }
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -196,15 +244,43 @@ function PureChatInput({
   };
 
   // Combine errors - rateLimitError takes precedence
-  const displayError = rateLimitError || subscriptionError;
+  const isGuestLimitError =
+    !isAuthenticated && rateLimitError?.message === "Guest limit reached";
+
+  useEffect(() => {
+    if (isGuestLimitError) {
+      setShowAuthDialog(true);
+    }
+  }, [isGuestLimitError]);
+
+  const displayError =
+    (isGuestLimitError ? null : rateLimitError) ||
+    (isAuthenticated ? subscriptionError : null);
 
   return (
     <div className="fixed bottom-0 w-full max-w-3xl">
       {displayError && (
-        <TokenLimitExceeded
-          navigate={navigate}
-          reason={displayError.details}
-        />
+        <TokenLimitExceeded navigate={navigate} reason={displayError.details} />
+      )}
+      {!isAuthenticated && guestRemaining !== null && (
+        <div className="px-4 pb-2 text-xs text-muted-foreground">
+          Free questions remaining:{" "}
+          <span className="font-medium text-foreground">
+            {guestRemaining}/{guestLimit ?? 10}
+          </span>
+          {isGuestBlocked && (
+            <>
+              {" "}
+              —{" "}
+              <button
+                className="underline text-foreground"
+                onClick={() => setShowAuthDialog(true)}
+              >
+                Login/Register to continue
+              </button>
+            </>
+          )}
+        </div>
       )}
       <div className="bg-secondary rounded-t-[20px] p-2 pb-0 w-full">
         <div className="relative">
@@ -216,13 +292,21 @@ function PureChatInput({
                 placeholder={
                   rateLimitError
                     ? rateLimitError.message
-                    : subscriptionLoading || !subscriptionFetched
+                    : isAuthenticated
+                    ? subscriptionLoading || !subscriptionFetched
                       ? "Loading..."
                       : !subscription.hasActiveSubscription
-                        ? "Please subscribe to send messages"
-                        : "Ask Your Question"
+                      ? "Please subscribe to send messages"
+                      : "Ask Your Question"
+                    : isGuestBlocked
+                    ? "Login or register to continue"
+                    : "Ask Your Question"
                 }
-                disabled={subscriptionLoading || !subscriptionFetched}
+                disabled={
+                  isGuestBlocked ||
+                  (isAuthenticated &&
+                    (subscriptionLoading || !subscriptionFetched))
+                }
                 className={cn(
                   "w-full px-4 py-3 border-none shadow-none dark:bg-transparent",
                   "placeholder:text-muted-foreground resize-none",
@@ -259,6 +343,21 @@ function PureChatInput({
           </div>
         </div>
       </div>
+
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent className="sm:max-w-[520px] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>Login required</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              You’ve used all free questions. Please login or register to
+              continue.
+            </p>
+          </DialogHeader>
+          <div className="p-6 pt-4">
+            <AuthForm />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

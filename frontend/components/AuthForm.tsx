@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Tabs,
   TabsContent,
@@ -23,6 +23,7 @@ import { apiCall } from "@/utils/api-call";
 import { toast } from "sonner";
 import { syncDataFromServer } from "@/lib/sync-server";
 import { clearAllUserData } from "../dexie/queries";
+import { getOrCreateAnonymousId } from "@/frontend/utils/anonymous";
 import { ChevronDownIcon } from "lucide-react";
 import { Calendar } from "@/frontend/components/ui/calendar";
 import {
@@ -36,6 +37,7 @@ export default function AuthForm() {
   const { setUser, setToken, setLoading, loading } = useUserStore();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   // Login state
   const [loginPhone, setLoginPhone] = useState("");
@@ -86,7 +88,16 @@ export default function AuthForm() {
 
         setUser(response.user);
         setToken(response.token);
-        setOtpVerified(true);
+        setLoginSuccess(true);
+
+        // Claim guest chats into this account (if any)
+        try {
+          await apiCall("/api/anonymous/claim", "POST", {
+            anonId: getOrCreateAnonymousId(),
+          });
+        } catch (e) {
+          console.error("Failed to claim guest chats:", e);
+        }
 
         // Sync data immediately after successful login
         try {
@@ -140,9 +151,27 @@ export default function AuthForm() {
     }
   };
 
-  if (otpVerified) {
-    toast.success("OTP verified successfully");
-  }
+  useEffect(() => {
+    if (otpVerified) {
+      toast.success("OTP verified successfully");
+      // prevent duplicate toasts on re-render
+      setOtpVerified(false);
+    }
+  }, [otpVerified]);
+
+  useEffect(() => {
+    if (loginSuccess) {
+      toast.success("Login successful");
+      setLoginSuccess(false);
+    }
+  }, [loginSuccess]);
+
+  // When switching between login/register, reset transient flags
+  useEffect(() => {
+    setRegisteredUser(false);
+    setOtpVerified(false);
+    setLoginSuccess(false);
+  }, [activeTab]);
 
   if (registeredUser) {
     return (

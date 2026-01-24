@@ -21,6 +21,8 @@ import { useUserStore } from "../stores/UserStore";
 import { apiCall } from "@/utils/api-call";
 import { LoaderCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getOrCreateAnonymousId } from "@/frontend/utils/anonymous";
+import { syncDataFromServer } from "@/lib/sync-server";
 
 const FormSchema = z.object({
   pin: z
@@ -84,6 +86,19 @@ export default function InputOTPForm({
       if (response.success) {
         setUser(response.user);
         setToken(response.token);
+        // Claim guest chats into this account (if any), then sync
+        try {
+          await apiCall("/api/anonymous/claim", "POST", {
+            anonId: getOrCreateAnonymousId(),
+          });
+        } catch (e) {
+          console.error("Failed to claim guest chats:", e);
+        }
+        try {
+          await syncDataFromServer();
+        } catch (e) {
+          console.error("Sync failed after register:", e);
+        }
         onVerified();
         return;
       } else {

@@ -187,22 +187,25 @@ model UserMemory {
 
 model Thread {
   id                  String    @id @default(cuid())
-  userId              String
+  userId              String?
+  anonId              String?   @map("anon_id")
   title               String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   lastMessageAt       DateTime  @default(now())
   conversationSummary String
   messages            Message[]
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, lastMessageAt])
+  @@index([anonId, lastMessageAt])
 }
 
 model Message {
   id        String   @id @default(cuid())
   threadId  String
-  userId    String
+  userId    String?
+  anonId    String?  @map("anon_id")
   role      String
   content   String
   parts     Json
@@ -211,6 +214,7 @@ model Message {
 
   @@index([threadId])
   @@index([userId])
+  @@index([anonId])
   @@index([createdAt])
 }
 
@@ -229,6 +233,18 @@ model WhatsAppMessage {
   @@index([userId])
   @@index([phoneNumber])
   @@map("whatsapp_messages")
+}
+
+model AnonymousUsage {
+  id            String   @id @default(cuid())
+  identifier    String   @unique
+  questionsUsed Int      @default(0) @map("questions_used")
+  lastUsedAt    DateTime @default(now()) @map("last_used_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("anonymous_usage")
 }
 
 // Optional: Email log for debugging
