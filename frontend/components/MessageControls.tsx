@@ -7,6 +7,7 @@ import { UseChatHelpers } from "@ai-sdk/react";
 import { deleteTrailingMessages } from "@/frontend/dexie/queries";
 import { useUserStore } from "../stores/UserStore";
 import { apiCall } from "@/utils/api-call";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface MessageControlsProps {
   threadId: string;
@@ -102,21 +103,50 @@ export default function MessageControls({
         }
       )}
     >
-      <Button variant="ghost" size="icon" onClick={handleCopy} title={copied ? "Copied!" : "Copy"}>
-        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-      </Button>
-      <Button variant="ghost" size="icon" onClick={handleShare} title={shared ? "Link copied!" : "Share"}>
-        {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={handleCopy} aria-label="Copy">
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>
+          {copied ? "Copied!" : "Copy"}
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={handleShare} aria-label="Share">
+            {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>
+          {shared ? "Link copied!" : "Share"}
+        </TooltipContent>
+      </Tooltip>
       {setMode && isAuthenticated && (
-        <Button variant="ghost" size="icon" onClick={() => setMode("edit")} title="Edit">
-          <SquarePen className="w-4 h-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setMode("edit")} aria-label="Edit">
+              <SquarePen className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>
+            Edit
+          </TooltipContent>
+        </Tooltip>
       )}
       {isAuthenticated && (
-        <Button variant="ghost" size="icon" onClick={handleRegenerate} title="Regenerate">
-          <RefreshCcw className="w-4 h-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={handleRegenerate} aria-label="Regenerate">
+              <RefreshCcw className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>
+            Regenerate
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );

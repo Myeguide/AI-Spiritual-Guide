@@ -23,7 +23,9 @@ type SortField =
   | "dob"
   | "phoneNumber"
   | "createdAt"
-  | "requestsUsedLifetime";
+  | "requestsUsedLifetime"
+  | "questionsAsked"
+  | "totalRequests";
 type SortDirection = "asc" | "desc";
 
 interface User {
@@ -41,6 +43,8 @@ interface User {
   requestsUsedLifetime: number;
   whatsappEnabled: boolean;
   subscriptionType: "free" | "one-time" | "premium-monthly" | "premium-yearly";
+  questionsAsked: number;
+  totalRequests: number;
 }
 
 const Dashboard = () => {
@@ -294,7 +298,7 @@ const Dashboard = () => {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[22%]"
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[20%]"
                         onClick={() => handleSort("email")}
                       >
                         <div className="flex items-center gap-2">
@@ -303,7 +307,7 @@ const Dashboard = () => {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[12%] hidden lg:table-cell"
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[10%] hidden lg:table-cell"
                         onClick={() => handleSort("dob")}
                       >
                         <div className="flex items-center gap-2">
@@ -312,7 +316,7 @@ const Dashboard = () => {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[15%]"
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[14%]"
                         onClick={() => handleSort("phoneNumber")}
                       >
                         <div className="flex items-center gap-2">
@@ -321,7 +325,7 @@ const Dashboard = () => {
                         </div>
                       </th>
                       <th
-                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[12%] hidden xl:table-cell"
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[10%] hidden xl:table-cell"
                         onClick={() => handleSort("createdAt")}
                       >
                         <div className="flex items-center gap-2">
@@ -329,7 +333,25 @@ const Dashboard = () => {
                           <ChevronDown className={`w-4 h-4 transition-transform ${sortField === "createdAt" && sortDirection === "desc" ? "rotate-180" : ""}`} />
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground w-[9%]">
+                      <th
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[10%]"
+                        onClick={() => handleSort("questionsAsked")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Question Asked
+                          <ChevronDown className={`w-4 h-4 transition-transform ${sortField === "questionsAsked" && sortDirection === "desc" ? "rotate-180" : ""}`} />
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent w-[10%]"
+                        onClick={() => handleSort("totalRequests")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Total Request
+                          <ChevronDown className={`w-4 h-4 transition-transform ${sortField === "totalRequests" && sortDirection === "desc" ? "rotate-180" : ""}`} />
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground w-[8%]">
                         WhatsApp
                       </th>
                     </tr>
@@ -360,27 +382,37 @@ const Dashboard = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 w-[22%]">
+                        <td className="px-4 py-4 w-[20%]">
                           <span className="text-sm text-muted-foreground truncate block">
                             {user.email}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[12%] hidden lg:table-cell">
+                        <td className="px-4 py-4 w-[10%] hidden lg:table-cell">
                           <span className="text-sm text-muted-foreground">
                             {formatDate(user.dob)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[15%]">
+                        <td className="px-4 py-4 w-[14%]">
                           <span className="text-sm text-muted-foreground">
                             {user.phoneNumber}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[12%] hidden xl:table-cell">
+                        <td className="px-4 py-4 w-[10%] hidden xl:table-cell">
                           <span className="text-sm text-foreground">
                             {formatDate(user.createdAt)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 w-[9%]">
+                        <td className="px-4 py-4 w-[10%]">
+                          <span className="text-sm text-foreground">
+                            {user.questionsAsked}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 w-[10%]">
+                          <span className="text-sm text-foreground">
+                            {user.totalRequests}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 w-[8%]">
                           <div className="flex items-center justify-center">
                             {user.whatsappEnabled ? (
                               <WhatsAppIcon className="w-5 h-5 text-green-500" />
@@ -437,8 +469,18 @@ const Dashboard = () => {
                       <p className="text-foreground">{formatDate(user.dob)}</p>
                     </div>
                     <div>
+                      <span className="text-muted-foreground text-xs">Question Asked</span>
+                      <p className="text-foreground">{user.questionsAsked}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Total Request</span>
+                      <p className="text-foreground">{user.totalRequests}</p>
+                    </div>
+                    <div>
                       <span className="text-muted-foreground text-xs">Subscription</span>
-                      <p className="text-foreground capitalize">{user.subscriptionType.replace("-", " ")}</p>
+                      <p className="text-foreground capitalize">
+                        {user.subscriptionType.replace("-", " ")}
+                      </p>
                     </div>
                   </div>
                 </div>

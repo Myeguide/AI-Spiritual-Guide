@@ -12,6 +12,7 @@ import ContactPage from "@/frontend/components/Contact";
 import Dashboard from "@/frontend/components/Dashboard";
 import AdminRoute from "@/frontend/components/AdminRoute";
 import MainLayout from "./MainLayout";
+import { TooltipProvider } from "@/frontend/components/ui/tooltip";
 
 export default function App() {
   const [isSynced, setIsSynced] = useState(false);
@@ -80,33 +81,35 @@ export default function App() {
   }, [authenticated, fetchSubscription]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Layout with footer */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/billing" element={<PricingPage />} />
-          <Route path="/account" element={<UserProfile />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <AdminRoute>
-                <Dashboard />
-              </AdminRoute>
-            }
-          />
-        </Route>
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      <BrowserRouter>
+        <Routes>
+          {/* Layout with footer */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/billing" element={<PricingPage />} />
+            <Route path="/account" element={<UserProfile />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <AdminRoute>
+                  <Dashboard />
+                </AdminRoute>
+              }
+            />
+          </Route>
 
-        {/* Chat layout WITHOUT footer */}
-        <Route path="chat" element={<ChatLayout />}>
-          <Route index element={<Home />} />
-          <Route path=":id" element={<Thread />} />
-        </Route>
+          {/* Chat layout WITHOUT footer */}
+          <Route path="chat" element={<ChatLayout />}>
+            <Route index element={<Home />} />
+            <Route path=":id" element={<Thread />} />
+          </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<p>Not found</p>} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch-all */}
+          <Route path="*" element={<p>Not found</p>} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   );
 }

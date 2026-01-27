@@ -18,6 +18,7 @@ import { useUserStore } from "@/frontend/stores/UserStore";
 import { TokenLimitExceeded } from "./RateWarning";
 import { apiCall } from "@/utils/api-call";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface ChatInputProps {
   threadId: string;
@@ -66,6 +67,7 @@ function PureChatInput({
   const [guestRemaining, setGuestRemaining] = useState<number | null>(null);
   const [guestLimit, setGuestLimit] = useState<number | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<{
     message: string;
     details: string;
@@ -119,6 +121,10 @@ function PureChatInput({
     }
   }, [isAuthenticated, showAuthDialog]);
 
+  // Combine errors - rateLimitError takes precedence
+  const isGuestLimitError =
+    !isAuthenticated && rateLimitError?.message === "Guest limit reached";
+
   const handleSubmit = useCallback(async () => {
     const currentInput = textareaRef.current?.value || input;
     if (!currentInput.trim()) {
@@ -128,6 +134,9 @@ function PureChatInput({
 
     // Check rate limit first - show error and popup
     if (rateLimitError) {
+      if (isGuestLimitError) {
+        setShowLimitModal(true);
+      }
       return; // Don't proceed with submission
     }
 
@@ -139,7 +148,7 @@ function PureChatInput({
           setGuestRemaining(res.data.remaining);
           setGuestLimit(res.data.limit);
           if (!res.data.allowed) {
-            setShowAuthDialog(true);
+            setShowLimitModal(true);
             return;
           }
         }
@@ -171,13 +180,12 @@ function PureChatInput({
       if (!id) {
         try {
           navigate(`/chat/${threadId}`);
-          await createThread(threadId); // create thread locally first
-          const threadResponse = await apiCall("/api/threads", "POST", {
-            threadId,
+          // Create thread locally first (fast), then sync server in background
+          await createThread(threadId);
+          apiCall("/api/threads", "POST", { threadId }).catch((error) => {
+            console.error("Error creating thread on server:", error);
           });
-          if (!threadResponse.success) {
-            throw new Error("Failed to create thread on server");
-          }
+          // Kick off title generation in background (do not block send)
           complete(currentInput.trim(), {
             body: { threadId, messageId, isTitle: true },
           });
@@ -189,25 +197,27 @@ function PureChatInput({
         }
       }
       try {
-        await createMessage(threadId, userMessage); // save message locally first
+        // Save locally first (fast) so UI stays consistent even if offline
+        await createMessage(threadId, userMessage);
       } catch (error) {
         console.error("Error saving message locally:", error);
         toast.error("Failed to save message locally");
-        setIsSubmitting(false);
-        return;
+        // Don't block sending/AI request even if local persistence fails
       }
-      apiCall("/api/messages", "POST", {
-        threadId,
-        message: userMessage,
-      }).catch((error) => {
-        console.error("Error saving message to server:", error);
-        toast.error("Message sent but failed to sync with server");
-      });
+      // Append immediately so the message appears instantly and AI request starts right away
       append(userMessage);
       setInput("");
       adjustHeight(true);
       textareaRef.current?.focus();
       setSubscriptionError(null);
+
+      // Sync message to server in background (do not block)
+      apiCall("/api/messages", "POST", { threadId, message: userMessage }).catch(
+        (error) => {
+          console.error("Error saving message to server:", error);
+          toast.error("Message sent but failed to sync with server");
+        }
+      );
     } catch (error) {
       console.error("Error submitting message:", error);
       toast.error("Failed to send message. Please try again.");
@@ -229,6 +239,7 @@ function PureChatInput({
     rateLimitError,
     subscription.hasActiveSubscription,
     isAuthenticated,
+    isGuestLimitError,
   ]);
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -239,19 +250,36 @@ function PureChatInput({
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const newValue = e.target.value;
+    setInput(newValue);
     adjustHeight();
+    
+    // Show modal if user tries to type after reaching limit
+    if (isGuestBlocked && newValue.trim().length > 0) {
+      setShowLimitModal(true);
+    }
   };
-
-  // Combine errors - rateLimitError takes precedence
-  const isGuestLimitError =
-    !isAuthenticated && rateLimitError?.message === "Guest limit reached";
 
   useEffect(() => {
     if (isGuestLimitError) {
-      setShowAuthDialog(true);
+      setShowLimitModal(true);
+      setShowAuthDialog(false); // Close auth dialog if limit modal is shown
     }
   }, [isGuestLimitError]);
+
+  // Also show modal when guest usage is fetched and limit is reached
+  useEffect(() => {
+    if (!isAuthenticated && guestRemaining !== null && guestRemaining <= 0) {
+      setShowLimitModal(true);
+    }
+  }, [guestRemaining, isAuthenticated]);
+
+  // Close limit modal after successful login/register
+  useEffect(() => {
+    if (isAuthenticated && showLimitModal) {
+      setShowLimitModal(false);
+    }
+  }, [isAuthenticated, showLimitModal]);
 
   const displayError =
     (isGuestLimitError ? null : rateLimitError) ||
@@ -261,26 +289,6 @@ function PureChatInput({
     <div className="fixed bottom-0 w-full max-w-3xl">
       {displayError && (
         <TokenLimitExceeded navigate={navigate} reason={displayError.details} />
-      )}
-      {!isAuthenticated && guestRemaining !== null && (
-        <div className="px-4 pb-2 text-xs text-muted-foreground">
-          Free questions remaining:{" "}
-          <span className="font-medium text-foreground">
-            {guestRemaining}/{guestLimit ?? 10}
-          </span>
-          {isGuestBlocked && (
-            <>
-              {" "}
-              —{" "}
-              <button
-                className="underline text-foreground"
-                onClick={() => setShowAuthDialog(true)}
-              >
-                Login/Register to continue
-              </button>
-            </>
-          )}
-        </div>
       )}
       <div className="bg-secondary rounded-t-[20px] p-2 pb-0 w-full">
         <div className="relative">
@@ -344,12 +352,62 @@ function PureChatInput({
         </div>
       </div>
 
+      {/* Limit Reached Modal */}
+      <Dialog open={showLimitModal} onOpenChange={setShowLimitModal}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <DialogTitle>Free Question Limit Reached</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6 overflow-y-auto flex-1 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You've reached the limit of free questions. Please subscribe to our plan to continue asking questions.
+            </p>
+            
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => {
+                    setShowLimitModal(false);
+                    navigate("/billing");
+                  }}
+                  className="w-full bg-[#B500FF] text-white hover:bg-[#9A00CC]"
+                >
+                  Go to Subscription Page
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowLimitModal(false)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">
+                  Please login or register to subscribe to a plan:
+                </p>
+                <AuthForm />
+                <Button
+                  variant="outline"
+                  onClick={() => setShowLimitModal(false)}
+                  className="w-full mt-2"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keep existing Auth Dialog for backward compatibility */}
       <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
         <DialogContent className="sm:max-w-[520px] p-0">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle>Login required</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              You’ve used all free questions. Please login or register to
+              You've used all free questions. Please login or register to
               continue.
             </p>
           </DialogHeader>
@@ -371,16 +429,22 @@ const ChatInput = memo(PureChatInput, (prevProps, nextProps) => {
 
 function PureStopButton({ stop }: StopButtonProps) {
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={stop}
-      title="Stop generating"
-      aria-label="Stop generating response"
-      className="bg-[#B500FF]!"
-    >
-      <StopIcon size={20} />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={stop}
+          aria-label="Stop generating response"
+          className="bg-[#B500FF]!"
+        >
+          <StopIcon size={20} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        Stop generating
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -388,21 +452,27 @@ const StopButton = memo(PureStopButton);
 
 const PureSendButton = ({ onSubmit, disabled, isLoading }: SendButtonProps) => {
   return (
-    <Button
-      onClick={onSubmit}
-      variant="default"
-      size="icon"
-      disabled={disabled}
-      title="Send message"
-      aria-label="Send message"
-      className="bg-[#B500FF] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {isLoading ? (
-        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-      ) : (
-        <ArrowUpIcon size={18} />
-      )}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          onClick={onSubmit}
+          variant="default"
+          size="icon"
+          disabled={disabled}
+          aria-label="Send message"
+          className="bg-[#B500FF] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+          ) : (
+            <ArrowUpIcon size={18} />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        Send message
+      </TooltipContent>
+    </Tooltip>
   );
 };
 

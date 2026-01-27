@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { apiCall } from "@/utils/api-call";
 import { useNavigate } from "react-router";
 import { getOrCreateAnonymousId } from "@/frontend/utils/anonymous";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface ChatProps {
   threadId: string;
@@ -135,23 +136,27 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
       {/* Fixed header bar for small devices with background */}
       <div className="fixed top-0 right-0 left-0 h-12 bg-background/80 backdrop-blur-md z-20 sm:hidden flex items-center justify-end px-2 gap-1">
         <ThemeToggler className="relative top-auto right-auto" />
-        <Button
-          onClick={handleToggleNavigator}
-          variant="ghost"
-          size="icon"
-          title="Message Navigator"
-          aria-label={
-            isNavigatorVisible
-              ? "Hide message navigator"
-              : "Show message navigator"
-          }
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleToggleNavigator}
+              variant="ghost"
+              size="icon"
+              aria-label={
+                isNavigatorVisible
+                  ? "Hide message navigator"
+                  : "Show message navigator"
+              }
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6}>
+            Message Navigator
+          </TooltipContent>
+        </Tooltip>
       </div>
-      <main
-        className="flex flex-col w-full max-w-3xl pt-14 sm:pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out min-h-screen"
-      >
+      <main className="flex flex-col w-full max-w-3xl pt-14 sm:pt-10 pb-44 mx-auto transition-all duration-300 ease-in-out min-h-screen">
         <Messages
           threadId={threadId}
           messages={messages}
@@ -165,10 +170,13 @@ export default function Chat({ threadId, initialMessages }: ChatProps) {
         {messages.length === 0 && (
           <div className="flex-1 flex flex-col justify-center items-center text-center">
             <h1 className="font-semibold text-foreground">
-              Your Questions, Timeless Answers
+              Your questions. Answered by the Vedas.
             </h1>
             <p className="text-muted-foreground">
-              Get guidance on your life's dilemmas, conflicts, spiritual questions and more. The more detailed your question, the more personalized your answer.
+              Find clarity for life’s dilemmas, conflicts, and spiritual concerns. The more you share, the more personal your answers become.
+            </p>
+            <p className="text-muted-foreground">
+              Ask freely- everything you share stays private and confidential.
             </p>
           </div>
         )}
