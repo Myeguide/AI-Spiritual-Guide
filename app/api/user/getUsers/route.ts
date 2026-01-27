@@ -26,6 +26,8 @@ export async function GET() {
                         planType: true,
                         status: true,
                         expiresAt: true,
+                        totalRequests: true,
+                        requestsUsed: true,
                     },
                     take: 1,
                 },
@@ -35,14 +37,21 @@ export async function GET() {
             },
         });
 
-        // Transform data to include subscriptionType
-        const transformedUsers = users.map((user) => ({
-            ...user,
-            dob: user.dob?.toISOString() ?? null,
-            createdAt: user.createdAt.toISOString(),
-            updatedAt: user.updatedAt.toISOString(),
-            subscriptionType: user.Subscription[0]?.planType?.toLowerCase() ?? "free",
-        }));
+        // Transform data to include subscriptionType and usage stats
+        const transformedUsers = users.map((user) => {
+            const activeSubscription = user.Subscription[0];
+
+            return {
+                ...user,
+                dob: user.dob?.toISOString() ?? null,
+                createdAt: user.createdAt.toISOString(),
+                updatedAt: user.updatedAt.toISOString(),
+                subscriptionType: activeSubscription?.planType?.toLowerCase() ?? "free",
+                // Per-subscription usage
+                questionsAsked: activeSubscription?.requestsUsed ?? 0,
+                totalRequests: activeSubscription?.totalRequests ?? 0,
+            };
+        });
 
         return NextResponse.json({ success: true, status: 200, users: transformedUsers });
     } catch (error) {

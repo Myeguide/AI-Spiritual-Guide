@@ -217,10 +217,10 @@ export default function PricingPage() {
             );
             await fetchSubscription();
 
-            // Redirect to dashboard
+            // Redirect to external thank-you page after successful payment
             setTimeout(() => {
-              navigate("/chat");
-            }, 2000);
+              window.location.href = "https://myeternalguide.com/payment-success";
+            }, 1500);
           } catch (error) {
             console.error("Payment verification error:", error);
             toast.error(
